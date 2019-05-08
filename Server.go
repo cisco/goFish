@@ -10,12 +10,6 @@ import (
 )
 
 func main() {
-	// Process dynamic requests.
-	//http.HandleFunc("/", ServerPrint)
-
-	// Process file uploads.
-	//http.HandleFunc("/upload", UploadFile)
-
 	HandleHTMLTemplate("static/upload.html")
 	// Create and run the server.
 	CreateServer(80)
@@ -24,7 +18,11 @@ func main() {
 // Create the server.
 func CreateServer(port uint16) {
 	// Serve static assets (.html, .css, etc.).
-	fs := http.FileServer(http.Dir("videos"))
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	fs = http.FileServer(http.Dir("static/scripts"))
+	http.Handle("/scripts/", http.StripPrefix("/scripts/", fs))
+	fs = http.FileServer(http.Dir("static/videos"))
 	http.Handle("/videos/", http.StripPrefix("/videos/", fs))
 
 	// Create server in port.
@@ -38,14 +36,14 @@ func ServerPrint(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handles video files uploaded by users using forms on the server.
-func UploadFile(w http.ResponseWriter, r *http.Request) string {
+func UploadFile(w http.ResponseWriter, r *http.Request, formValue string) string {
 	fmt.Println("File Uploaded.")
 	var format = "mp4"
 
 	// Parse the form, looking for files with max size of 10mb.
 	r.ParseMultipartForm(10 << 20)
 
-	file, handler, err := r.FormFile("upload-video")
+	file, handler, err := r.FormFile(formValue)
 
 	if err != nil {
 		// Print to commnd line.
@@ -76,28 +74,55 @@ func UploadFile(w http.ResponseWriter, r *http.Request) string {
 		tempFile.Write(fileBytes)
 		fmt.Println("File uploaded successfully!")
 		return tempFile.Name()
-	} else {
-		fmt.Println("Incorrect file format!")
-		return ""
 	}
+	fmt.Println("Incorrect file format!")
+	return ""
 }
 
+func GetFileName(r *http.Request, formField string) string {
+	r.ParseMultipartForm(10 << 20)
+	var file, handler, err = r.FormFile(formField)
+	if err != nil {
+		fmt.Print("Erro selecting file: ")
+		fmt.Println(err)
+	} else if handler != nil {
+		fmt.Println(file)
+		return handler.Filename
+	}
+	return ""
+}
+
+// Creates the HTML required based on submitted files.
 func HandleHTMLTemplate(file string) {
 	var template = template.Must(template.ParseFiles(file))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "text/html")
 		if r.Method != http.MethodPost {
 			template.Execute(w, nil)
 			return
 		}
 
-		var file = UploadFile(w, r)
+		var leftVideoName, rightVideoName = GetFileName(r, "select-video-1"), GetFileName(r, "select-video-2")
+
+		// If we're not selecting video, then upload the videos instead.
+		if leftVideoName != "" && rightVideoName != "" {
+			fmt.Println("Selecting " + leftVideoName)
+			fmt.Println("Selecting " + rightVideoName)
+		} else {
+			leftVideoName = UploadFile(w, r, "upload-video-1")
+			rightVideoName = UploadFile(w, r, "upload-video-2")
+		}
+
+		w.Header().Add("Content-Type", "text/html")
+
+		// Execute our crafted HTML response and submit values to the page.
 		template.Execute(w, struct {
-			Success bool
-			File    string
+			VideosLoaded  bool
+			LeftVideoSrc  string
+			RightVideoSrc string
 		}{
-			(file != ""),
-			file,
+			(leftVideoName != "") && (rightVideoName != ""),
+			leftVideoName,
+			rightVideoName,
 		})
 	})
 }
