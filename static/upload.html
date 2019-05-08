@@ -1,0 +1,14 @@
+{{if .Success}}
+    <video width="320" height="240" controls>
+        <source src={{.File}} type="video/mp4">
+        Video tag is not supported by your current browser.
+    </video>
+{{else}}
+    <h3>Select the videos you wish to display</h3>
+{{end}}
+<h3>Upload Video</h3>
+<form method="post" enctype="multipart/form-data">
+    <input type="file" name="upload-video" /><br>
+    <!--input type="file" name="upload-file-2" /--><br>
+    <input type="submit" value="Upload Video" />
+</form>
