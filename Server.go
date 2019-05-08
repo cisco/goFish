@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -10,11 +11,12 @@ import (
 
 func main() {
 	// Process dynamic requests.
-	http.HandleFunc("/", ServerPrint)
+	//http.HandleFunc("/", ServerPrint)
 
 	// Process file uploads.
-	http.HandleFunc("/upload", UploadFile)
+	//http.HandleFunc("/upload", UploadFile)
 
+	HandleHTMLTemplate("static/upload.html")
 	// Create and run the server.
 	CreateServer(80)
 }
@@ -22,8 +24,8 @@ func main() {
 // Create the server.
 func CreateServer(port uint16) {
 	// Serve static assets (.html, .css, etc.).
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	fs := http.FileServer(http.Dir("videos"))
+	http.Handle("/videos/", http.StripPrefix("/videos/", fs))
 
 	// Create server in port.
 	http.ListenAndServe(":"+strconv.Itoa(int(port)), nil)
@@ -36,21 +38,20 @@ func ServerPrint(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handles video files uploaded by users using forms on the server.
-func UploadFile(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Server: File uploaded.\n")
+func UploadFile(w http.ResponseWriter, r *http.Request) string {
 	fmt.Println("File Uploaded.")
 	var format = "mp4"
 
 	// Parse the form, looking for files with max size of 10mb.
 	r.ParseMultipartForm(10 << 20)
 
-	file, handler, err := r.FormFile("upload-file")
+	file, handler, err := r.FormFile("upload-video")
 
 	if err != nil {
 		// Print to commnd line.
 		fmt.Println("Error while retrieving the file!")
 		fmt.Println(err)
-		return
+		return ""
 	}
 	defer file.Close()
 
@@ -73,9 +74,30 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		tempFile.Write(fileBytes)
-		fmt.Fprintf(w, "File uploaded successfully!\n")
+		fmt.Println("File uploaded successfully!")
+		return tempFile.Name()
 	} else {
-		fmt.Fprintf(w, "Incorrect file format!\n")
 		fmt.Println("Incorrect file format!")
+		return ""
 	}
+}
+
+func HandleHTMLTemplate(file string) {
+	var template = template.Must(template.ParseFiles(file))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/html")
+		if r.Method != http.MethodPost {
+			template.Execute(w, nil)
+			return
+		}
+
+		var file = UploadFile(w, r)
+		template.Execute(w, struct {
+			Success bool
+			File    string
+		}{
+			(file != ""),
+			file,
+		})
+	})
 }
