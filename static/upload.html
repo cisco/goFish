@@ -7,25 +7,29 @@
 {{if .VideosLoaded}}
     <div style="float:left;">
         <video width="320" height="240" controls class="video" id="left">
-            <source src="videos/{{.LeftVideoSrc}}" type="video/mp4">
+            <source src="static/videos/{{.LeftVideoSrc}}" type="video/mp4">
                 Video tag is not supported by your current browser.
         </video>
         <br>
-        <input type="range" min="0" max="100" id="left-slider" step="0.01"><div id="left-offset"></div>
+        <input type="range" min="0" max="100" id="left-slider" step="0.01" style="width:100%;">
+        <div id="left-offset"></div>
     </div>
     <div>
         <video width="320" height="240" controls class="video" id="right">
-            <source src="videos/{{.RightVideoSrc}}" type="video/mp4">
+            <source src="static/videos/{{.RightVideoSrc}}" type="video/mp4">
                 Video tag is not supported by your current browser.
         </video>
         <br>
-        <input type="range" min="0" max="100" id="right-slider" step="0.01"><div id="right-offset"></div>
+        <input type="range" min="0" max="100" id="right-slider" step="0.01" style="width:320px;">
+        <div id="right-offset"></div>
     </div>
     <br>
-    <button onclick="playBoth()">Play</button>
-    <button onclick="sync()">Sync Video</button>
+    <button onclick="playAll()">Play</button>
+    <button onclick="syncAll()">Play In-Sync</button>
     <br>
     <canvas id="left-right-video" width="640" height="240"></canvas>
+    <br>
+    <input type="range" value="0" min="0" max="0" id="curr-time" step="0.01" style="width:640px;">
 {{else}}
     <h3>Select the videos you wish to display</h3>
     <h3>Select Videos</h3>
@@ -37,16 +41,18 @@
 {{end}}
 <h3>Upload Videos</h3>
 <form method="post" enctype="multipart/form-data" name="upload">
-    <input type="file" name="upload-video-1" /><br>
-    <input type="file" name="upload-video-2" /><br>
+    <input type="file" name="upload-videos" multiple><br>
     <input type="submit" value="Upload Videos" />
 </form>
 
 
 <script> 
-    function playBoth()
+    function playAll()
     {
         var vids = document.getElementsByClassName("video");
+        Array.forEach(vids, function(vid) {
+            if(vid.ended) vid.currentTime = 0;
+        });
         vids[0].play();
     }
 
@@ -62,12 +68,11 @@
         }
     }
 
-    function sync()
+    function syncAll()
     {
         processor.leftVideo.pause();
         processor.leftVideo.currentTime = parseFloat(document.getElementById("left-offset").innerText);
         processor.rightVideo.currentTime = parseFloat(document.getElementById("right-offset").innerText)
-        
         processor.leftVideo.play();
     }
 
@@ -75,6 +80,34 @@
     {   
         handleSlider("left-slider", "left-offset", processor.leftVideo);
         handleSlider("right-slider", "right-offset", processor.rightVideo);
+
+        var scrubber = document.getElementById("curr-time");
+        var start_val, diff=0;
+        scrubber.onmousedown = function() {
+            processor.pause();
+            start_val = scrubber.value;
+        }
+        
+        scrubber.onmouseup = function() {
+            processor.play();
+        }
+        
+        var lastDiff;
+        scrubber.onchange = function() {
+            lastDiff = diff;
+            diff = Math.abs(start_val - scrubber.value);
+            console.log(diff);
+            if(lastDiff > diff)
+            {
+                processor.leftVideo.currentTime -= diff;
+                processor.rightVideo.currentTime -= diff;
+            }
+            else if (lastDiff < diff)
+            {
+                processor.leftVideo.currentTime += diff;
+                processor.rightVideo.currentTime += diff;
+            }
+        }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
