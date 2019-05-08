@@ -1,14 +1,84 @@
-{{if .Success}}
-    <video width="320" height="240" controls>
-        <source src={{.File}} type="video/mp4">
-        Video tag is not supported by your current browser.
-    </video>
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1"> 
+        <script src="scripts/ProcessVideo.js" type="text/javascript"></script>
+    </head>
+{{if .VideosLoaded}}
+    <div style="float:left;">
+        <video width="320" height="240" controls class="video" id="left">
+            <source src="videos/{{.LeftVideoSrc}}" type="video/mp4">
+                Video tag is not supported by your current browser.
+        </video>
+        <br>
+        <input type="range" min="0" max="100" id="left-slider" step="0.01"><div id="left-offset"></div>
+    </div>
+    <div>
+        <video width="320" height="240" controls class="video" id="right">
+            <source src="videos/{{.RightVideoSrc}}" type="video/mp4">
+                Video tag is not supported by your current browser.
+        </video>
+        <br>
+        <input type="range" min="0" max="100" id="right-slider" step="0.01"><div id="right-offset"></div>
+    </div>
+    <br>
+    <button onclick="playBoth()">Play</button>
+    <button onclick="sync()">Sync Video</button>
+    <br>
+    <canvas id="left-right-video" width="640" height="240"></canvas>
 {{else}}
     <h3>Select the videos you wish to display</h3>
+    <h3>Select Videos</h3>
+    <form method="post" enctype="multipart/form-data" name="select">
+        <input type="file" name="select-video-1" /><br>
+        <input type="file" name="select-video-2" /><br>
+        <input type="submit" value="Select Videos" />
+    </form>
 {{end}}
-<h3>Upload Video</h3>
-<form method="post" enctype="multipart/form-data">
-    <input type="file" name="upload-video" /><br>
-    <!--input type="file" name="upload-file-2" /--><br>
-    <input type="submit" value="Upload Video" />
+<h3>Upload Videos</h3>
+<form method="post" enctype="multipart/form-data" name="upload">
+    <input type="file" name="upload-video-1" /><br>
+    <input type="file" name="upload-video-2" /><br>
+    <input type="submit" value="Upload Videos" />
 </form>
+
+
+<script> 
+    function playBoth()
+    {
+        var vids = document.getElementsByClassName("video");
+        vids[0].play();
+    }
+
+    function handleSlider(id, value, video)
+    { 
+        var slider = document.getElementById(id);
+        var output = document.getElementById(value);
+        output.innerHTML = slider.value;
+        slider.max = video.duration;
+
+        slider.oninput = function () {
+            output.innerHTML = this.value;
+        }
+    }
+
+    function sync()
+    {
+        processor.leftVideo.pause();
+        processor.leftVideo.currentTime = parseFloat(document.getElementById("left-offset").innerText);
+        processor.rightVideo.currentTime = parseFloat(document.getElementById("right-offset").innerText)
+        
+        processor.leftVideo.play();
+    }
+
+    window.onload = function()
+    {   
+        handleSlider("left-slider", "left-offset", processor.leftVideo);
+        handleSlider("right-slider", "right-offset", processor.rightVideo);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        processor.doLoad();
+    });
+</script>
+</html>
