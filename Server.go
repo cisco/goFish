@@ -4,115 +4,127 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 )
 
-func main() {
-	HandleHTMLTemplate("static/upload.html")
-	// Create and run the server.
-	CreateServer(80)
+// FileInfo : Structure to contain information about the precise formatting of files being added to the server.
+type FileInfo struct {
+	Name    string
+	Format  string
+	MaxSize int64
 }
 
-// Create the server.
-func CreateServer(port uint16) {
+// CreateServer : Creates a server on the given port number. Each directory passed will be handled statically to
+// allow static assets to be read and utilized properly by the browser.
+func CreateServer(port uint16, dirs ...string) {
 	// Serve static assets (.html, .css, etc.).
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	fs = http.FileServer(http.Dir("static/scripts"))
-	http.Handle("/scripts/", http.StripPrefix("/scripts/", fs))
-	fs = http.FileServer(http.Dir("static/ videos/"))
-	http.Handle("/videos/", http.StripPrefix("/videos/", fs))
+
+	for _, dir := range dirs {
+		fs = http.FileServer(http.Dir("static/" + dir))
+		http.Handle("/"+dir+"/", http.StripPrefix("/"+dir+"/", fs))
+	}
+
+	fmt.Println("!!! SERVER STARTED !!!")
+	fmt.Println("||| PORT : " + strconv.Itoa(int(port)))
 
 	// Create server in port.
 	http.ListenAndServe(":"+strconv.Itoa(int(port)), nil)
 }
 
-// Handles video files uploaded by users using forms on the server.
-func UploadFile(w http.ResponseWriter, r *http.Request, formValue string) {
-	fmt.Println("File Uploaded.")
-	var format = "mp4"
-
+// UploadFile : Handles video files uploaded to the server by users using forms in the browser.
+func UploadFile(w http.ResponseWriter, r *http.Request, formValue string, saveLocation string, fileInfo FileInfo) {
 	formData := r.MultipartForm
 
-	files := formData.File["upload-videos"]
+	files := formData.File["upload-files"]
 
-	for i, _ := range files {
+	// Iterate through each file and create a copy on the server.
+	for i := range files {
 		file, err := files[i].Open()
-		defer file.Close()
 
+		defer file.Close()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		out, err := os.Create("static/videos" + "video-*." + format)
+		out, err := ioutil.TempFile("static/"+saveLocation, fileInfo.Name+"*"+fileInfo.Format)
 
 		defer out.Close()
-
 		if err != nil {
-			fmt.Println("Unable to create the file to be written. Please enure you have correct write access priviliges.")
+			fmt.Println("*** Unable to create the file to be written. Please enure you have correct write access priviliges.")
 			return
 		}
 
 		_, err = io.Copy(out, file)
 
 		if err != nil {
+			fmt.Print("*** ")
 			fmt.Println(err)
 			return
 		}
 
-		fmt.Println("Files uploaded successfully.")
-		fmt.Println("Filename: " + files[i].Filename)
-
+		fmt.Println(" >>> File uploaded successfully.")
+		fmt.Println(" >>> Filename: " + files[i].Filename)
 	}
+	fmt.Println("||| Finished Upload.")
 }
 
-// If the file is valid, returns the name of the file.
+// GetFileName : If the file is valid, returns the name of the file.
 func GetFileName(r *http.Request, formField string) string {
 	r.ParseMultipartForm(10 << 20)
 	var file, handler, err = r.FormFile(formField)
 	if err != nil {
-		fmt.Print("Erro selecting file: ")
+		fmt.Print("*** Error selecting file : ")
 		fmt.Println(err)
-	} else if handler != nil {
-		fmt.Println(file)
+	} else if handler != nil && file != nil {
 		return handler.Filename
 	}
 	return ""
 }
 
-// Creates the HTML required based on submitted files.
-func HandleHTMLTemplate(file string) {
-	var template = template.Must(template.ParseFiles(file))
+// BuildHTMLTemplate : Creates the HTML required based on submitted files.
+func BuildHTMLTemplate(file string, fn func(http.ResponseWriter, *http.Request) interface{}) {
+	var tmpl = template.Must(template.ParseFiles(file))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			template.Execute(w, nil)
+			tmpl.Execute(w, nil)
 			return
 		}
 
-		var leftVideoName, rightVideoName = GetFileName(r, "select-video-1"), GetFileName(r, "select-video-2")
-
-		// If we're not selecting video, then upload the videos instead.
-		if leftVideoName != "" && rightVideoName != "" {
-			fmt.Println("Selecting " + leftVideoName)
-			fmt.Println("Selecting " + rightVideoName)
-		} else {
-			UploadFile(w, r, "upload-videos")
-		}
-
-		w.Header().Add("Content-Type", "text/html")
+		// Get the function which defines what we do to the page.
+		retval := fn(w, r)
 
 		// Execute our crafted HTML response and submit values to the page.
-		template.Execute(w, struct {
-			VideosLoaded  bool
-			LeftVideoSrc  string
-			RightVideoSrc string
-		}{
-			(leftVideoName != "") && (rightVideoName != ""),
-			leftVideoName,
-			rightVideoName,
-		})
+		tmpl.Execute(w, retval)
 	})
+}
+
+// HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload
+// the files.
+func HandleVideoHTML(w http.ResponseWriter, r *http.Request) interface{} {
+	var leftVideoName, rightVideoName = GetFileName(r, "select-video-1"), GetFileName(r, "select-video-2")
+
+	// If we're not selecting video, then upload the videos instead.
+	if leftVideoName == "" && rightVideoName == "" {
+		fmt.Println("||| Uploading files:")
+		UploadFile(w, r, "upload-videos", "videos/", FileInfo{"video-", ".mp4", 10 << 20})
+	} else {
+		fmt.Println("||| Selecting files:")
+		fmt.Println(" >>> Left Video  : " + leftVideoName)
+		fmt.Println(" >>> Right Video : " + rightVideoName)
+	}
+
+	return struct {
+		VideosLoaded  bool
+		LeftVideoSrc  string
+		RightVideoSrc string
+	}{
+		(leftVideoName != "") && (rightVideoName != ""),
+		leftVideoName,
+		rightVideoName,
+	}
 }

@@ -6,17 +6,18 @@ let processor = {
         this.canvas = document.getElementById("left-right-video");
         let self = this;
         this.leftVideo.addEventListener('play', function(){
-            self.rightVideo.play();
+            //if(self.rightVideo.paused) self.rightVideo.play();
         }, false);
         this.rightVideo.addEventListener('play', function(){
-            //self.leftVideo.currenttime = this.currenttime;
+            //if(self.leftVideo.paused) self.leftVideo.play();
             self.timerCallback();
         }, false);
 
         this.leftVideo.addEventListener('pause', function(){
-            if(!self.ended) self.rightVideo.pause();
+            //if(!self.ended) self.rightVideo.pause();
         }, false);
         this.rightVideo.addEventListener('pause', function(){
+            //if(!self.ended) self.leftVideo.pause();
             self.timerCallback();
             clearTimeout(this.timer);
         }, false);
@@ -44,14 +45,12 @@ let processor = {
         // Calculate the length of the combined video.
         var lOffset = parseFloat(document.getElementById("left-offset").innerText);
         var rOffset = parseFloat(document.getElementById("right-offset").innerText);
-        var time = ((this.leftVideo.duration - lOffset) + (this.rightVideo.duration - rOffset)) /2
 
-        var scrubber = document.getElementById("curr-time");
-        scrubber.max = time.toString();
-        var max_curr = Math.max(this.leftVideo.currentTime, this.rightVideo.currentTime);
-        var min_curr = Math.min(this.leftVideo.currentTime, this.rightVideo.currentTime)
-        var max_offset = Math.max(lOffset, rOffset), min_offset = Math.min(lOffset, rOffset);
-        scrubber.value = ((max_curr - max_offset) + (min_curr - min_offset)) / 2;
+        var time = Math.min(this.leftVideo.duration - lOffset, this.rightVideo.duration - rOffset);
+
+        var scrubber = document.getElementById("scrubber");
+        scrubber.max = time;
+        scrubber.value = Math.max(this.leftVideo.currentTime - lOffset, this.rightVideo.currentTime - rOffset);
     },
 
     pause : function()
@@ -64,5 +63,22 @@ let processor = {
     {
         this.leftVideo.play();
         this.rightVideo.play();
+    },
+
+    sync: function()
+    {
+        this.pause();
+        this.leftVideo.currentTime = parseFloat(document.getElementById("left-offset").innerText);
+        this.rightVideo.currentTime = parseFloat(document.getElementById("right-offset").innerText);
+        this.play();
+    },
+
+    adjustVideo: function(diff)
+    {
+        var lOffset = parseFloat(document.getElementById("left-offset").innerText);
+        var rOffset = parseFloat(document.getElementById("right-offset").innerText);
+
+        this.leftVideo.currentTime = (diff * this.leftVideo.duration) + lOffset;
+        this.rightVideo.currentTime = (diff * this.rightVideo.duration) + rOffset;
     }
 }
