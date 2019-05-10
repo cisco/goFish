@@ -1,0 +1,16 @@
+BasedOnStyle: WebKit
+
+AlignAfterOpenBracket: Align
+AllowAllParametersOfDeclarationOnNextLine: false
+BraceWrapping:
+  AfterClass:      true
+  AfterNamespace:  true
+  AfterObjCDeclaration: true
+  AfterStruct:     true
+  AfterUnion:      true
+BreakBeforeBraces: Mozilla
+IncludeCategories:
+KeepEmptyLinesAtTheStartOfBlocks: false
+ReflowComments:  false
+SortIncludes:    false
+Standard:        Cpp03
