@@ -35,8 +35,8 @@ func CreateServer(port uint16, dirs ...string) {
 	http.ListenAndServe(":"+strconv.Itoa(int(port)), nil)
 }
 
-// UploadFile : Handles video files uploaded to the server by users using forms in the browser.
-func UploadFile(w http.ResponseWriter, r *http.Request, formValue string, saveLocation string, fileInfo FileInfo) {
+// UploadFiles : Handles video files uploaded to the server by users using forms in the browser.
+func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInfo FileInfo) {
 	formData := r.MultipartForm
 
 	files := formData.File["upload-files"]
@@ -87,7 +87,7 @@ func GetFileName(r *http.Request, formField string) string {
 }
 
 // BuildHTMLTemplate : Creates the HTML required based on submitted files.
-func BuildHTMLTemplate(file string, fn func(http.ResponseWriter, *http.Request) interface{}) {
+func BuildHTMLTemplate(file string, fn func(*http.Request) interface{}) {
 	var tmpl = template.Must(template.ParseFiles(file))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -96,7 +96,7 @@ func BuildHTMLTemplate(file string, fn func(http.ResponseWriter, *http.Request) 
 		}
 
 		// Get the function which defines what we do to the page.
-		retval := fn(w, r)
+		retval := fn(r)
 
 		// Execute our crafted HTML response and submit values to the page.
 		tmpl.Execute(w, retval)
@@ -105,13 +105,13 @@ func BuildHTMLTemplate(file string, fn func(http.ResponseWriter, *http.Request) 
 
 // HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload
 // the files.
-func HandleVideoHTML(w http.ResponseWriter, r *http.Request) interface{} {
+func HandleVideoHTML(r *http.Request) interface{} {
 	var leftVideoName, rightVideoName = GetFileName(r, "select-video-1"), GetFileName(r, "select-video-2")
 
 	// If we're not selecting video, then upload the videos instead.
 	if leftVideoName == "" && rightVideoName == "" {
 		fmt.Println("||| Uploading files:")
-		UploadFile(w, r, "upload-videos", "videos/", FileInfo{"video-", ".mp4", 10 << 20})
+		UploadFiles(r, "upload-videos", "videos/", FileInfo{"video-", ".mp4", 10 << 20})
 	} else {
 		fmt.Println("||| Selecting files:")
 		fmt.Println(" >>> Left Video  : " + leftVideoName)
