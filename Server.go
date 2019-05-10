@@ -6,7 +6,9 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 )
 
 // FileInfo : Structure to contain information about the precise formatting of files being added to the server.
@@ -18,15 +20,10 @@ type FileInfo struct {
 
 // CreateServer : Creates a server on the given port number. Each directory passed will be handled statically to
 // allow static assets to be read and utilized properly by the browser.
-func CreateServer(port uint16, dirs ...string) {
+func CreateServer(port uint16) {
 	// Serve static assets (.html, .css, etc.).
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	for _, dir := range dirs {
-		fs = http.FileServer(http.Dir("static/" + dir))
-		http.Handle("/"+dir+"/", http.StripPrefix("/"+dir+"/", fs))
-	}
 
 	fmt.Println("!!! SERVER STARTED !!!")
 	fmt.Println("||| PORT : " + strconv.Itoa(int(port)))
@@ -51,6 +48,9 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 			return
 		}
 
+		if _, err := os.Stat("static/" + saveLocation); os.IsNotExist(err) {
+			os.Mkdir("static/"+saveLocation, 0777)
+		}
 		out, err := ioutil.TempFile("static/"+saveLocation, fileInfo.Name+"*"+fileInfo.Format)
 
 		defer out.Close()
@@ -103,6 +103,12 @@ func BuildHTMLTemplate(file string, fn func(*http.Request) interface{}) {
 	})
 }
 
+type VideoInfo struct {
+	Name string
+	Tag  string
+	JSON string
+}
+
 // HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload
 // the files.
 func HandleVideoHTML(r *http.Request) interface{} {
@@ -111,20 +117,33 @@ func HandleVideoHTML(r *http.Request) interface{} {
 	// If we're not selecting video, then upload the videos instead.
 	if leftVideoName == "" && rightVideoName == "" {
 		fmt.Println("||| Uploading files:")
-		UploadFiles(r, "upload-videos", "videos/", FileInfo{"video-", ".mp4", 10 << 20})
+		//t := time.Now()
+		//UploadFiles(r, "upload-videos", "videos/"+t.Format("2006-01-02-030405"), FileInfo{"video-", ".mp4", 10 << 20})
+		UploadFiles(r, "upload-videos", "videos/", FileInfo{"V_", ".mp4", 10 << 20})
 	} else {
 		fmt.Println("||| Selecting files:")
 		fmt.Println(" >>> Left Video  : " + leftVideoName)
 		fmt.Println(" >>> Right Video : " + rightVideoName)
 	}
 
+	leftTag, rightTag := strings.TrimSuffix(strings.TrimPrefix(leftVideoName, "V_"), ".mp4"), strings.TrimSuffix(strings.TrimPrefix(rightVideoName, "V_"), ".mp4")
+	file, err := ioutil.ReadFile("static/video-info/DE_" + leftTag + ".json")
+	leftJSON, rightJSON := "", ""
+	if err == nil {
+		leftJSON = string(file)
+	}
+	file, err = ioutil.ReadFile("static/video-info/DE_" + rightTag + ".json")
+	if err == nil {
+		rightJSON = string(file)
+	}
+	fmt.Println(leftTag)
 	return struct {
-		VideosLoaded  bool
-		LeftVideoSrc  string
-		RightVideoSrc string
+		VideosLoaded   bool
+		LeftVideoInfo  VideoInfo
+		RightVideoInfo VideoInfo
 	}{
 		(leftVideoName != "") && (rightVideoName != ""),
-		leftVideoName,
-		rightVideoName,
+		VideoInfo{leftVideoName, leftTag, leftJSON},
+		VideoInfo{rightVideoName, rightTag, rightJSON},
 	}
 }

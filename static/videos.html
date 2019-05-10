@@ -2,32 +2,32 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1"> 
-        <script src="scripts/ProcessVideo.js" type="text/javascript"></script>
+        <script src="/static/scripts/ProcessVideo.js" type="text/javascript"></script>
     </head>
 {{if .VideosLoaded}}
     <div style="display: flex;">
         <div>
             <video width="320" height="240" controls class="video" id="left">
-                <source src="static/videos/{{.LeftVideoSrc}}" type="video/mp4">
+                <source src="/static/videos/{{.LeftVideoInfo.Name}}" type="video/mp4">
                     Video tag is not supported by your current browser.
             </video>
             <br>
             <button onclick="video_handler.seekFrame(processor.leftVideo, -1)"><</button>
             <button onclick="video_handler.seekFrame(processor.leftVideo, 1)">></button>
             <br>
-            <input type="range" min="0" max="100" id="left-slider" style="width:320px;">
+            <input type="range" value="0" min="0" max="0" id="left-slider" style="width:320px;">
             <div id="left-offset"></div>
         </div>
         <div>
             <video width="320" height="240" controls class="video" id="right">
-                <source src="static/videos/{{.RightVideoSrc}}" type="video/mp4">
+                <source src="/static/videos/{{.RightVideoInfo.Name}}" type="video/mp4">
                     Video tag is not supported by your current browser.
             </video>
             <br>
             <button onclick="video_handler.seekFrame(processor.rightVideo, -1)"><</button>
             <button onclick="video_handler.seekFrame(processor.rightVideo, 1)">></button>
             <br>
-            <input type="range" min="0" max="100" id="right-slider" style="width:320px;">
+            <input type="range" value="0" min="0" max="0" id="right-slider" style="width:320px;">
             <div id="right-offset"></div>
         </div>
         <div>
@@ -57,15 +57,15 @@
     <button onclick="processor.pause()">Pause</button>
     <br>
     <canvas id="adjusted-video" width="640" height="240"></canvas>
+    <div>Activity: </div><div id="activity">None</div>
     <br>
     <input type="range" value="0" min="0" max="0" id="scrubber" style="width:640px;"><br>
     <div id="adjusted-time"></div>
 {{end}}
-<h3>Select the videos you wish to display</h3>
 <h3>Select Videos</h3>
 <form method="post" enctype="multipart/form-data">
-    <input type="file" name="select-video-1" /><br>
-    <input type="file" name="select-video-2" /><br>
+    <label for="select-video-1">Left Video:</label><input type="file" name="select-video-1" /><br>
+    <label for="select-video-2">Right Video:</label><input type="file" name="select-video-2" /><br>
     <input type="submit" value="Select Videos" />
 </form>
 
@@ -75,17 +75,39 @@
     <input type="submit" value="Upload Videos" />
 </form>
 
-<script> 
-    document.addEventListener("DOMContentLoaded", () => {
-        processor.load();
-    });
-
+<script>
     window.onload = function()
     {   
+        processor.load();
         video_handler.handleSlider(processor.leftVideo);
         video_handler.handleSlider(processor.rightVideo);
         video_handler.adjustMainVideo();
         video_handler.timerCallback();
+        json_handler.load({{.LeftVideoInfo.JSON}});
+        video_handler.seekFrame(processor.leftVideo, json_handler.Event_QRCode().frame);
+        time(processor.leftVideo);
+        json_handler.load({{.RightVideoInfo.JSON}});
+        video_handler.seekFrame(processor.rightVideo, json_handler.Event_QRCode().frame);
+        time(processor.rightVideo);
+
+    }
+
+    function time(video)
+    {
+        var acti = false;
+        for(i = 1; i < json_handler.handle.DetectedEvents.length; i++)
+        {
+            var Event = json_handler.handle.DetectedEvents[i]["Event_Activity_"+i];
+            var act = document.getElementById("activity");
+            var currTime = parseFloat(document.getElementById("scrubber").value);
+            if(Event.frame_start <= video.currentTime * 30 && video.currentTime * 30 <= Event.frame_end)
+            {
+                acti = true;
+                act.innerHTML = "Activity Happening";
+            }
+            if(!acti) act.innerHTML = "None";
+        }
+        setTimeout(function(){time(video);}, 0);
     }
 </script>
 </html>

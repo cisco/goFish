@@ -7,6 +7,7 @@ let video_handler = {
         video.frameOffset = Math.max(0, Math.min(video.frameOffset, Math.ceil(video.duration * 30)));
         slider.value = video.frameOffset;
         output.innerHTML = video.frameOffset;
+        video.currentTime = parseFloat(slider.value) / 30;
         video.maxFrame     = Math.ceil(video.duration * 30);
         video.adjustedFrameSize = video.maxFrame - video.frameOffset;
         console.log(video.maxFrame);
@@ -27,6 +28,7 @@ let video_handler = {
         }
     },
 
+    // This is a little didactic and probably shouldn't remain as a permanant function.
     fillVideoInfo: function(video)
     {
         var elem = document.getElementById(video.name + '-video');
@@ -141,11 +143,46 @@ let processor = {
 
     adjustVideo: function(diff)
     {
-        console.log(diff);
-        this.leftVideo.currentTime = (diff + this.leftVideo.frameOffset)/30;
-        console.log((diff + this.leftVideo.frameOffset)/30);
-        this.rightVideo.currentTime = (diff + this.rightVideo.frameOffset)/30;
+        this.leftVideo.currentTime = (diff + this.leftVideo.frameOffset) / 30;
+        this.rightVideo.currentTime = (diff + this.rightVideo.frameOffset) / 30;
     }
 }
 
+let json_handler = {
+    load: function(tag)
+    {
+        this.handle = JSON.parse(tag);//"{}";
+        this.tag = tag;
+        let self = this;
+        /*this.decodeJson(tag, function(response){
+            self.handle = JSON.parse(response);
+            console.log(self.handle);
+        });*/
+    },
+
+    decodeJson: function(tag, callback)
+    {
+        let self = this;
+        var xobj = new XMLHttpRequest();
+        xobj.overrideMimeType("application/json");
+        xobj.open('GET', "/static/video-info/DE_" + tag + ".json", false);
+        xobj.onreadystatechange = function () {
+            if (xobj.readyState == 4 && xobj.status == "200") {
+                callback(xobj.responseText);
+            }
+        };
+        xobj.send(null);
+
+    },
+
+    Event_QRCode: function()
+    {
+        return this.handle.DetectedEvents[0]["Event_QRCode"];
+    },
+
+    Event_Activity: function(id)
+    {
+        return this.handle.DetectedEvents[id]["Event_Activity_"+id];
+    }
+}
 
