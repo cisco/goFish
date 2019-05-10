@@ -5,5 +5,5 @@ func main() {
 	BuildHTMLTemplate("static/videos.html", HandleVideoHTML)
 
 	// Create and run the server.
-	CreateServer(80, "scripts", "videos")
+	CreateServer(80)
 }
