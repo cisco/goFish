@@ -10,6 +10,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package( OpenCV 4.0.0 REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
+file(GLOB INC_SRC
+    "resources/*.h"
+    "resources/*.cc"
+    "*.cc"
+)
+
 # findFish executable 
-add_executable( findFish findFish.cc )
+add_executable( findFish ${INC_SRC} )
 target_link_libraries( findFish ${OpenCV_LIBS} )

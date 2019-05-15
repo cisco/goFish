@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -69,6 +70,12 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 
 		fmt.Println(" >>> File uploaded successfully.")
 		fmt.Println(" >>> Filename: " + files[i].Filename)
+
+		output, err := exec.Command("./findFishy", "./static/videos/"+files[i].Filename).Output()
+		if output != nil {
+			fmt.Println("||| Processing video...")
+			fmt.Printf("%s", output)
+		}
 	}
 	fmt.Println("||| Finished Upload.")
 }
@@ -136,7 +143,7 @@ func HandleVideoHTML(r *http.Request) interface{} {
 	if err == nil {
 		rightJSON = string(file)
 	}
-	fmt.Println(leftTag)
+
 	return struct {
 		VideosLoaded   bool
 		LeftVideoInfo  VideoInfo
