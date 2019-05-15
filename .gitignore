@@ -34,5 +34,5 @@
 # Extra files
 .DS_Store
 static/videos/
-static/videos/
+static/videos-info/
 .vscode/
