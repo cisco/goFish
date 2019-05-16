@@ -18,37 +18,61 @@
 using namespace std;
 using namespace cv;
 
-// Directory to save JSON config files to.
+// Directory to save JSON config video_files to.
 #define JSON_DIR "static/video-info/"
 #define VIDEO_DIR "static/videos/"
 
 // Uncomment this to see the tracking at work.
 //#define TRACKING
 
-std::vector<std::string> GetVideosFromDir(std::string dir);
+std::vector<std::string> GetVideosFromDir(std::string, std::string);
 void ProcessVideo(std::string);
 std::vector<std::string> SplitString(std::string&, const char*);
 
 int main(int argc, char* argv[])
 {
-    auto files = GetVideosFromDir(VIDEO_DIR);
-    vector<thread> threads;
-    threads.resize(files.size());
-    for(int i = 0; i < files.size(); i++)
+    useOptimized();
+    setUseOptimized(true);
+
+    // Keep the application running to continuously check for more files
+    while(true)
     {
-        threads[i] = thread(ProcessVideo, files[i]);
+        auto json_files = GetVideosFromDir(JSON_DIR, ".json");
+        auto video_files = GetVideosFromDir(VIDEO_DIR, ".mp4");
+
+        for(int i = 0; i < json_files.size(); i++)
+        {
+            string jf = json_files[i].substr(json_files[i].find("DE_")+3, json_files[i].length());
+            jf = jf.substr(0, jf.find_last_of("."));
+            cout<<jf<<endl;
+
+            for(auto it = video_files.begin(); it != video_files.end(); ++it)
+                if((*it).find(jf) != string::npos)
+                {
+                    cout << "\"" << (*it) << "\" has already been processed!"<<endl;
+                    video_files.erase(it);
+                    break;
+                }
+        }
+
+        vector<thread> threads;
+        threads.resize(video_files.size());
+        cout<<"Vector size: "<<video_files.size()<<endl;
+        for(int i = 0; i < video_files.size(); i++)
+        {
+            threads[i] = thread(ProcessVideo, video_files[i]);
+        }
+
+        for(int i = 0; i < threads.size(); i++)
+            threads[i].join();
     }
-
-    for(int i = 0; i < threads.size(); i++)
-        threads[i].join();
-
     
     return 0;
 }
 
-std::vector<std::string> GetVideosFromDir(std::string dir)
+std::vector<std::string> GetVideosFromDir(std::string dir, std::string filter)
 {
-    std::vector<std::string> files;
+    std::vector<std::string> video_files;
     DIR *dp;
 	struct dirent *d;
 	if ((dp = opendir(dir.c_str())) != NULL)
@@ -56,11 +80,11 @@ std::vector<std::string> GetVideosFromDir(std::string dir)
 		while ((d = readdir(dp)) != NULL)
 			if ((std::strcmp(std::string(d->d_name).c_str(), ".") != false &&
                 std::strcmp(std::string(d->d_name).c_str(), "..") != false) &&
-                std::string(d->d_name).find(".mp4") != string::npos)
-				files.push_back(dir + d->d_name);
+                std::string(d->d_name).find(filter) != string::npos)
+				video_files.push_back(dir + d->d_name);
 		closedir(dp);
 	}
-    return files;
+    return video_files;
 }
 
 void ProcessVideo(string file)

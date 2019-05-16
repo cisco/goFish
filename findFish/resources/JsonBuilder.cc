@@ -2,7 +2,7 @@
 #include <cstdarg>
 
 JSON::JSON(std::string ObjectName)
-: name_{ ObjectName }, json_string_{ "{}" } {}
+: json_string_{ "{}" }, name_{ ObjectName } {}
 
 JSON::JSON(const JSON& j)
 {
