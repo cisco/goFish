@@ -4,14 +4,14 @@
 #include <opencv2/tracking.hpp>
 
 #include <iostream>
-#include <vector>
-#include <string>
-#include <regex>
-#include <map>
-#include <algorithm>
 #include <fstream>
 #include <dirent.h>
 #include <thread>
+#include <map>
+#include <vector>
+#include <string>
+#include <regex>
+#include <algorithm>
 
 #include "resources/JsonBuilder.h"
 
@@ -25,11 +25,11 @@ using namespace cv;
 // Uncomment this to see the tracking at work.
 //#define TRACKING
 
-std::vector<std::string> GetVideosFromDir(std::string, std::string);
-void ProcessVideo(std::string);
-std::vector<std::string> SplitString(std::string&, const char*);
+vector<string> GetVideosFromDir(string, string);
+void ProcessVideo(string);
+vector<string> SplitString(string&, const char*);
 
-int main(int argc, char* argv[])
+int main()
 {
     useOptimized();
     setUseOptimized(true);
@@ -44,7 +44,6 @@ int main(int argc, char* argv[])
         {
             string jf = json_files[i].substr(json_files[i].find("DE_")+3, json_files[i].length());
             jf = jf.substr(0, jf.find_last_of("."));
-            cout<<jf<<endl;
 
             for(auto it = video_files.begin(); it != video_files.end(); ++it)
                 if((*it).find(jf) != string::npos)
@@ -57,11 +56,8 @@ int main(int argc, char* argv[])
 
         vector<thread> threads;
         threads.resize(video_files.size());
-        cout<<"Vector size: "<<video_files.size()<<endl;
         for(int i = 0; i < video_files.size(); i++)
-        {
             threads[i] = thread(ProcessVideo, video_files[i]);
-        }
 
         for(int i = 0; i < threads.size(); i++)
             threads[i].join();
@@ -70,17 +66,17 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-std::vector<std::string> GetVideosFromDir(std::string dir, std::string filter)
+vector<string> GetVideosFromDir(string dir, string filter)
 {
-    std::vector<std::string> video_files;
+    vector<string> video_files;
     DIR *dp;
 	struct dirent *d;
 	if ((dp = opendir(dir.c_str())) != NULL)
 	{
 		while ((d = readdir(dp)) != NULL)
-			if ((std::strcmp(std::string(d->d_name).c_str(), ".") != false &&
-                std::strcmp(std::string(d->d_name).c_str(), "..") != false) &&
-                std::string(d->d_name).find(filter) != string::npos)
+			if ((strcmp(string(d->d_name).c_str(), ".") != false &&
+                strcmp(string(d->d_name).c_str(), "..") != false) &&
+                string(d->d_name).find(filter) != string::npos)
 				video_files.push_back(dir + d->d_name);
 		closedir(dp);
 	}
@@ -167,7 +163,7 @@ void ProcessVideo(string file)
         // Masking to find contours of moving objects.
         {
             bkgd_sub_ptr->apply(frame, mask);
-            std::vector<KeyPoint> keypoints;
+            vector<KeyPoint> keypoints;
             detector->detect(frame, keypoints);
 
             Mat im_with_keypoints;
@@ -216,19 +212,19 @@ void ProcessVideo(string file)
 
 vector<string> SplitString(string& str, const char* delimiter)
 {
-   vector<string> result;
-   size_t i = 0;
-   string temp = str;
+    vector<string> result;
+    size_t i = 0;
+    string temp = str;
 
     regex r("\\s+");
-   while ((i = temp.find(delimiter)) != string::npos)
-   {
-      if (i > str.length())
-         i = str.length() - 1;
-        result.push_back(regex_replace(temp.substr(0, i), r, ""));
-        temp.erase(0, i + 1);
-   }
-   result.push_back(regex_replace(temp.substr(0, i), r, ""));
+    while ((i = temp.find(delimiter)) != string::npos)
+    {
+        if (i > str.length())
+            i = str.length() - 1;
+            result.push_back(regex_replace(temp.substr(0, i), r, ""));
+            temp.erase(0, i + 1);
+    }
+    result.push_back(regex_replace(temp.substr(0, i), r, ""));
 
-   return result;
+    return result;
 }
