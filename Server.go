@@ -1,35 +1,66 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 )
+
+// Server : Server object to handle HTTP requests.
+type Server struct {
+	MUX *http.ServeMux
+}
+
+// NewServer : Constructs a new Server type.
+func NewServer(args ...func(*Server)) *Server {
+	server := &Server{
+		MUX: http.NewServeMux(),
+	}
+
+	for _, f := range args {
+		f(server)
+	}
+
+	// Serve static assets (.html, .css, etc.).
+	fs := http.FileServer(http.Dir("static"))
+	server.MUX.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	log.Println("=== SERVER STARTED ===")
+
+	return server
+}
+
+// ServerHTTP : Wrapper for the Server MUX ServeHTTP method.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.MUX.ServeHTTP(w, r)
+}
+
+// BuildHTMLTemplate : Creates the HTML required based on submitted files.
+func (s *Server) BuildHTMLTemplate(file string, fn func(*http.Request) interface{}) {
+	var tmpl = template.Must(template.ParseFiles(file))
+	s.MUX.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			tmpl.Execute(w, nil)
+			return
+		}
+
+		// Get the function which defines what we do to the page.
+		retval := fn(r)
+
+		// Execute our crafted HTML response and submit values to the page.
+		tmpl.Execute(w, retval)
+	})
+}
 
 // FileInfo : Structure to contain information about the precise formatting of files being added to the server.
 type FileInfo struct {
 	Name    string
 	Format  string
 	MaxSize int64
-}
-
-// CreateServer : Creates a server on the given port number. Each directory passed will be handled statically to
-// allow static assets to be read and utilized properly by the browser.
-func CreateServer(port uint16) {
-	// Serve static assets (.html, .css, etc.).
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	fmt.Println("!!! SERVER STARTED !!!")
-	fmt.Println("||| PORT : " + strconv.Itoa(int(port)))
-
-	// Create server in port.
-	http.ListenAndServe(":"+strconv.Itoa(int(port)), nil)
 }
 
 // UploadFiles : Handles video files uploaded to the server by users using forms in the browser.
@@ -44,7 +75,7 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 
 		defer file.Close()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 
@@ -55,22 +86,22 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 
 		defer out.Close()
 		if err != nil {
-			fmt.Println("*** Unable to create the file to be written. Please enure you have correct write access priviliges.")
+			log.Println("Error: Unable to create the file to be written. Please enure you have correct write access priviliges.")
 			return
 		}
 
 		_, err = io.Copy(out, file)
 
 		if err != nil {
-			fmt.Print("*** ")
-			fmt.Println(err)
+			log.Print("Error: ")
+			log.Println(err)
 			return
 		}
 
-		fmt.Println(" >>> File uploaded successfully.")
-		fmt.Println(" >>> Filename: " + files[i].Filename)
+		log.Println("  File uploaded successfully.")
+		log.Println("  > Filename: " + files[i].Filename)
 	}
-	fmt.Println("||| Finished Upload.")
+	log.Println(" Finished Upload.")
 }
 
 // GetFileName : If the file is valid, returns the name of the file.
@@ -78,8 +109,8 @@ func GetFileName(r *http.Request, formField string) string {
 	r.ParseMultipartForm(10 << 20)
 	var file, handler, err = r.FormFile(formField)
 	if err != nil {
-		fmt.Print("*** Error selecting file : ")
-		fmt.Println(err)
+		log.Print("Error: Selecting file, ")
+		log.Println(err)
 	} else if handler != nil && file != nil {
 		return handler.Filename
 	}
@@ -103,6 +134,7 @@ func BuildHTMLTemplate(file string, fn func(*http.Request) interface{}) {
 	})
 }
 
+// VideoInfo : Structure that holds information about a video, which is passed to HTML.
 type VideoInfo struct {
 	Name string
 	Tag  string
@@ -116,14 +148,14 @@ func HandleVideoHTML(r *http.Request) interface{} {
 
 	// If we're not selecting video, then upload the videos instead.
 	if leftVideoName == "" && rightVideoName == "" {
-		fmt.Println("||| Uploading files:")
+		log.Println(" Uploading files:")
 		//t := time.Now()
 		//UploadFiles(r, "upload-videos", "videos/"+t.Format("2006-01-02-030405"), FileInfo{"video-", ".mp4", 10 << 20})
 		UploadFiles(r, "upload-videos", "videos/", FileInfo{"V_", ".mp4", 10 << 20})
 	} else {
-		fmt.Println("||| Selecting files:")
-		fmt.Println(" >>> Left Video  : " + leftVideoName)
-		fmt.Println(" >>> Right Video : " + rightVideoName)
+		log.Println(" Selecting files:")
+		log.Println(" > Left Video  : " + leftVideoName)
+		log.Println(" > Right Video : " + rightVideoName)
 	}
 
 	leftTag, rightTag := strings.TrimSuffix(strings.TrimPrefix(leftVideoName, "V_"), ".mp4"), strings.TrimSuffix(strings.TrimPrefix(rightVideoName, "V_"), ".mp4")
