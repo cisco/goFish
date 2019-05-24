@@ -1,39 +1,71 @@
+let processor = new Processor();
+let videoHandler = new VideoHandler(processor);
+let eventHandler = new EventHandler();
+
+var timer = null;
+let FRAMERATE = 30;
+
 $(function(){
     SubmitForms();
 });
 
 $(document).ajaxSuccess(function(){
     SubmitForms();
-    setTimeout(load, 1000);
+    setTimeout(LoadAll, 1000);
+
 });
 
-function load()
-{   
-    // Start up the processor and video_handler.
-    processor.load();
-    video_handler.handleSlider(processor.leftVideo);
-    video_handler.handleSlider(processor.rightVideo);
-    video_handler.adjustMainVideo();
-    video_handler.timerCallback();
+window.onload = function()
+{
+    LoadAll();
+}
+
+function play()
+{
+    processor.play();
+
+    timer = setInterval(function(){
+        processor.run();
+        videoHandler.run();
+        eventHandler.run();
+    }, 1000/FRAMERATE);
+}
+
+function pause()
+{
+    processor.pause();
+    clearInterval(timer);
+}
+
+function LoadAll()
+{
+    processor = new Processor();
+    videoHandler = new VideoHandler(processor);
+    eventHandler = new EventHandler();
+
 
     // Handle JSON for Left Video
     if(document.getElementById("left-json") != null)
-        json_handler.load(document.getElementById("left-json").textContent);
-    if(json_handler.handle != null)
     {
-        if(json_handler.Event_QRCode() != null)
-            video_handler.seekFrame(processor.leftVideo, json_handler.Event_QRCode().frame);
-        json_handler.timerCallback(processor.leftVideo);
+        var json = new JsonHandler(document.getElementById("left-json").textContent, processor.leftVideo);
+        if(json.handle != null)
+            if(json.Event_QRCode() != null)
+            videoHandler.seekFrame(processor.leftVideo, json.Event_QRCode().frame);
+
+        eventHandler.events = json.events;
     }
-    // handle JSON for Right Video.
+
+    // Handle JSON for Right Video.
     if(document.getElementById("right-json") != null)
-        json_handler.load(document.getElementById("right-json").textContent);
-    if(json_handler.handle != null)
     {
-        if(json_handler.Event_QRCode() != null)
-            video_handler.seekFrame(processor.rightVideo, json_handler.Event_QRCode().frame);
-        json_handler.timerCallback(processor.rightVideo);
+        var json = new JsonHandler(document.getElementById("right-json").textContent, processor.rightVideo);
+        if(json.handle != null)
+            if(json.Event_QRCode() != null)
+            videoHandler.seekFrame(processor.rightVideo, json.Event_QRCode().frame);
+        eventHandler.events = json.events;
     }
+
+    eventHandler.draw();
 }
 
 function SubmitForms()

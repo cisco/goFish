@@ -7,16 +7,16 @@
 class JSON
 {
  public:
-    JSON() = delete;
     JSON(std::string ObjectName);
     ~JSON();
     JSON(const JSON&);
     JSON(std::string ObjectName, std::map<std::string, std::string> Object);
-    JSON(std::string ObjectName, std::vector<JSON> Object);
     JSON(std::string ObjectName, JSON Objects...);
 
     void AddKeyValue(std::string Key, std::string Value);
     void AddObject(JSON&);
+
+    void BuildJSONObject();
     void BuildJSONObjectArray();
 
     std::string GetJSON() const;

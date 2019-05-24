@@ -13,7 +13,7 @@ import (
 
 func main() {
 	os.Setenv("PORT", "80")
-	go RunProcess("./FishFinder")
+	//go RunProcess("./FishFinder")
 	StartServer()
 }
 
