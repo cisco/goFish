@@ -28,6 +28,7 @@ using namespace cv;
 vector<string> GetVideosFromDir(string, string);
 void ProcessVideo(string);
 vector<string> SplitString(string&, const char*);
+std::map<std::string, std::string> GetGeoURIValues(std::string&);
 
 int main()
 {
@@ -105,8 +106,8 @@ void ProcessVideo(string file)
 
     // Get the total number of frames in the video.
     auto totalFrames = cap.get(cv::CAP_PROP_FRAME_COUNT);
-    cout << "||| Processing \"" << vidFileName << "\"" << endl;
-    cout << "|>>> Total Frames: " << totalFrames << endl;
+    cout << "=== Processing \"" << vidFileName << "\" ===" << endl;
+    cout << "  > Total Frames: " << totalFrames << endl;
 
     QRCodeDetector qrDetector;
 
@@ -147,13 +148,9 @@ void ProcessVideo(string file)
                 auto tempVec = DE.GetSubobjectNames();
                 if(find(tempVec.begin(), tempVec.end(), "Event_QRCode") == tempVec.end())
                 {
-                    map<string, string> info;
-                    info.insert(make_pair("latitude", SplitString(url, "|")[0]));
-                    info.insert(make_pair("longitude", SplitString(url, "|")[1]));
-                    info.insert(make_pair("time", SplitString(url, "|")[2]));
+                    map<string, string> info = GetGeoURIValues(url);
                     info.insert(make_pair("frame", to_string(currentFrame)));
                     JSON QREvent = JSON("Event_QRCode", info);
-
                     DE.AddObject(QREvent);
                 }
             }
@@ -194,9 +191,9 @@ void ProcessVideo(string file)
         #endif
     }
 
-    cout << "||| Finished processing \"" << vidFileName << "\"" << endl;
+    cout << "=== Finished processing \"" << vidFileName << "\" ===" << endl;
     
-    cap.release(); // free up the video memory
+    cap.release();
 
     destroyAllWindows();
 
@@ -227,4 +224,27 @@ vector<string> SplitString(string& str, const char* delimiter)
     result.push_back(regex_replace(temp.substr(0, i), r, ""));
 
     return result;
+}
+
+std::map<std::string, std::string> GetGeoURIValues(std::string& uri)
+{
+    std::map<std::string, std::string> json;
+    
+    auto strings = SplitString(uri, ";");
+    for(auto str : strings)
+    {
+        if(str.find("geo:") != std::string::npos)
+        {
+            str = str.substr(str.find("geo:")+4, str.length());
+            auto v = SplitString(str, ",");
+            
+            json.insert(std::make_pair("lat", v[0]));
+            json.insert(std::make_pair("long", v[1]));
+        }
+        auto v = SplitString(str, "=");
+        for(int i = 0; i < v.size()-1; i+=2)
+            json.insert(std::make_pair(v[i], v[i+1]));
+    }
+    
+    return json;
 }

@@ -1,0 +1,66 @@
+/* Resizing the Google glyphicons. */
+.material-icons {
+    font-size: 1.5em !important;
+}
+
+#videos {
+    grid-column: 3 / span 8;
+}
+
+#main-video {
+    display: inline-block;
+    text-align: center;
+    grid-column: 3 / span 8;
+    grid-row: 1;
+}
+
+#adjusted-video {
+    background: #C6C7CA ;
+    width: 100%;
+}
+
+#event-time-bar {
+    background: #9E9EA2;
+    width: 100%;
+    height: 2em;
+    border-radius: 5px;
+}
+
+/* Controls */
+#controls {
+    display: flex;
+    justify-content: center;
+}
+
+#controls > button:first-child {
+    background: #049FD9;
+    color: #FFFFFF;
+    padding: 0.5em 1em;
+    border: none;
+    border-radius: 5px 0 0 5px;
+}
+
+#controls > button {
+    background: #049FD9;
+    color: #FFFFFF;
+    margin: 1px;
+    padding: 0.5em 1em;
+    border: none;
+}
+
+#controls > button:last-child {
+    background: #049FD9;
+    color: #FFFFFF;
+    padding: 0.5em 1em;
+    border: none;
+    border-radius: 0 5px 5px 0;
+}
+
+#controls > button:hover {
+    background: #C4D6ED;
+}
+
+#controls > button:active {
+    background: #097DBC;
+}
+/* End Controls */

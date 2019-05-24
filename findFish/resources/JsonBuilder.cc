@@ -1,5 +1,6 @@
 #include "JsonBuilder.h"
 #include <cstdarg>
+#include <cstdlib>
 
 JSON::JSON(std::string ObjectName)
 : json_string_{ "{}" }, name_{ ObjectName } {}
@@ -30,29 +31,17 @@ JSON::JSON(std::string ObjectName, std::map<std::string, std::string> Object)
         ++it;
         json_string_ += "\"" + e.first + "\"";
         json_string_ += ":";
-        if(std::atof(e.second.c_str())) json_string_ += e.second;
+
+        // Check to see if the value is a number. if not, wrap it in quotations.
+        char* err;
+        std::strtod(e.second.c_str(), &err);
+        if(*err == '\0') json_string_ += e.second;
         else json_string_ += "\"" + e.second + "\"";
+
+        // If it's not the last item, add a comma to continue the list.
         if(it != Object.end()) json_string_ += ",";
     }
     json_string_ += "}";
-
-    json_string_ += "}";
-}
-
-JSON::JSON(std::string ObjectName, std::vector<JSON> Object)
-{
-    name_ = ObjectName;
-    json_string_ = "{";
-
-    json_string_ += "\"" + name_ + "\" : [";
-    auto it = Object.begin();
-    for(auto e : Object)
-    {
-        ++it;
-        json_string_ += e.GetJSON();
-        if(it != Object.end()) json_string_ += ",";
-    }
-    json_string_ += "]";
 
     json_string_ += "}";
 }
@@ -81,6 +70,24 @@ void JSON::AddKeyValue(std::string Key, std::string Value)
 void JSON::AddObject(JSON& Object)
 {
     subobjects_.insert(make_pair(Object.GetName(), Object.GetJSON()));
+}
+
+void JSON::BuildJSONObject()
+{
+    json_string_ = "{";
+
+    json_string_ += "\"" + name_ + "\" : {";
+    auto it = subobjects_.begin();
+    for(auto e : subobjects_)
+    {
+        ++it;
+        json_string_ += e.second;
+        if(it != subobjects_.end()) json_string_ += ",";
+    }
+    json_string_ += "}";
+
+    json_string_ += "}";
+
 }
 
 void JSON::BuildJSONObjectArray()
