@@ -1,4 +1,4 @@
-#include "JsonBuilder.h"
+#include "includes/JsonBuilder.h"
 #include <cstdarg>
 #include <cstdlib>
 
@@ -66,10 +66,16 @@ void JSON::AddKeyValue(std::string Key, std::string Value)
 {
     subobjects_.insert(std::make_pair(Key, Value));
 }
+void JSON::AddObject(JSON Object)
+{
+    if(Object.GetJSON() != "{}")
+        subobjects_.insert(make_pair(Object.GetName(), Object.GetJSON()));
+}
 
 void JSON::AddObject(JSON& Object)
 {
-    subobjects_.insert(make_pair(Object.GetName(), Object.GetJSON()));
+    if(Object.GetJSON() != "{}")
+        subobjects_.insert(make_pair(Object.GetName(), Object.GetJSON()));
 }
 
 void JSON::BuildJSONObject()

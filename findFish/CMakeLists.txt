@@ -12,7 +12,7 @@ find_package( OpenCV 4.0.0 REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 file(GLOB INC_SRC
-    "resources/*.h"
+    "resources/includes/*.h"
     "resources/*.cc"
     "*.cc"
 )

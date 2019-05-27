@@ -65,9 +65,7 @@ func RunProcess(instr string) {
 		// Start looping timer to check that the process is still runProcessning.
 		for {
 			_, err := syscall.Getpgid(cmd.Process.Pid)
-			if err == nil {
-				time.Sleep(1 * time.Second)
-			} else {
+			if err != nil {
 				log.Println("!!! Process died! Starting again...")
 				RunProcess(instr)
 			}
