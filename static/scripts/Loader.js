@@ -12,7 +12,6 @@ $(function(){
 $(document).ajaxSuccess(function(){
     SubmitForms();
     setTimeout(LoadAll, 1000);
-
 });
 
 window.onload = function()

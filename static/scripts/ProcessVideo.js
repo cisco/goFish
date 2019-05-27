@@ -256,23 +256,21 @@ class JsonHandler
 
     Event_QRCode()
     {
+        function QR(e){return e["Event_QRCode"];}
         if(this.handle != null)
             if(this.handle.DetectedEvents.length > 0)
-                return this.handle.DetectedEvents[0]["Event_QRCode"];
+                return this.handle.DetectedEvents.find(QR)["Event_QRCode"];
         return null;
     }
 
     Event_Activity(id)
     {
         if(this.handle != null)
-            if(this.handle.DetectedEvents[id] != null)
-            {
-                var event = this.handle.DetectedEvents[id]["Event_Activity_"+id];
-                this.events.push(new Event((event.frame_start/this.video.maxFrame), (event.frame_end/this.video.maxFrame)));
-                return event;
-            }
-
-        return null;
+        {
+            function Activity(e){return e["Event_Activity_"+id];}
+            var event = this.handle.DetectedEvents.find(Activity)["Event_Activity_"+id];
+            this.events.push(new Event((event.frame_start/this.video.maxFrame), (event.frame_end/this.video.maxFrame)));
+        }
     }
 }
 
@@ -324,7 +322,7 @@ class EventHandler
 
             // Draw events.
             for(var i = 0; i < this.events.length; i++)
-                this.drawEvent(this.events[i].frame_start * 640, this.events[i].frame_end * 640, "#4411EE");
+                this.drawEvent(this.events[i].frame_start * 640, this.events[i].frame_end * 640, this.events[i].colour);
 
             // Draw the current position in the video.
             var scrubber = document.getElementById("scrubber");
@@ -346,6 +344,17 @@ class Event
     {
         this.frame_start = start;
         this.frame_end = end;
+        this.colour = this.getRandomColour();
+    }
+
+    getRandomColour() 
+    {
+        var letters = '0123456789ABCDEF';
+        var colour = '#';
+        for (var i = 0; i < 6; i++) {
+            colour += letters[Math.floor(Math.random() * 16)];
+        }
+        return colour;
     }
 }
 

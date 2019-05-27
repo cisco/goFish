@@ -14,6 +14,7 @@ class JSON
     JSON(std::string ObjectName, JSON Objects...);
 
     void AddKeyValue(std::string Key, std::string Value);
+    void AddObject(JSON);
     void AddObject(JSON&);
 
     void BuildJSONObject();
