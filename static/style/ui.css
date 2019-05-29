@@ -9,14 +9,14 @@ body {
     color: #EFEFEF;
     max-width: 100%;
     margin: 0;
-    padding: 1em;
+    padding: 0.5em;
     align-content: center;
     font-family: Arial, Helvetica, sans-serif;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
 }
 
 .navbar > div {
-    font-size: 2em;
+    font-size: 1.5em;
 }
 
 .container {
@@ -46,9 +46,6 @@ body {
     align-items: center;
 }
 
-.panel-header > span {
-}
-
 .panel-header:last-child{
     margin-left: auto;
 }
@@ -68,8 +65,7 @@ body {
 }
 
 .dropdown:hover {
-color: #AAAAAA;
-
+    color: #AAAAAA;
 }
 
 .dropdown-content {

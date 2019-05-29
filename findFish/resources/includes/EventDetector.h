@@ -16,11 +16,10 @@ class EventBuilder
     EventBuilder(cv::Mat& frame);
     virtual ~EventBuilder() {}
 
-    virtual void StartEvent(int&);
-    virtual void EndEvent(int&);
+    virtual void StartEvent(int&)  = 0;
+    virtual void EndEvent(int&) = 0;
 
     const JSON GetAsJSON();
-
 
  protected:
     cv::Mat frame_;
@@ -32,11 +31,11 @@ class EventBuilder
 class QREvent : public EventBuilder
 {
  public:
-    QREvent() : EventBuilder() {}
-    QREvent(cv::Mat& frame) : EventBuilder(frame) {}
+    QREvent(cv::Mat& frame);
     virtual ~QREvent() {}
 
-    virtual void StartEvent(int&);
+    virtual void StartEvent(int&) override;
+    virtual void EndEvent(int&) override;
 
     const bool DetectedQR();
  
@@ -48,16 +47,16 @@ class QREvent : public EventBuilder
 class ActivityEvent : public EventBuilder
 {
  public:
-    ActivityEvent(cv::Mat& frame, int id) : EventBuilder(frame), id_{id}, active_{true} {}
+    ActivityEvent(cv::Mat& frame, int id);
     virtual ~ActivityEvent() {}
 
-    virtual void StartEvent(int&);
-    virtual void EndEvent(int&);
+    virtual void StartEvent(int&) override;
+    virtual void EndEvent(int&) override;
 
     void SetIsActive(bool);
     bool IsActive();
 
  private:
     int id_;
-    bool  active_;
+    bool active_;
 };

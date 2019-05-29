@@ -1,16 +1,28 @@
-let processor = new Processor();
-let videoHandler = new VideoHandler(processor);
+let processor    = new Processor();
+let videoHandler = new VideoSettingsHandler(processor);
 let eventHandler = new EventHandler();
 
 var timer = null;
-let FRAMERATE = 30;
 
 $(function(){
-    SubmitForms();
+    SubmitMultipartForms("#select-video, #upload-video");
 });
 
 $(document).ajaxSuccess(function(){
-    SubmitForms();
+    SubmitMultipartForms("#select-video, #upload-video");
+    $("#event-time-bar").on("click", function(e){
+        var bar_offset = e.clientX - $(this).position().left;
+        var scrubber = document.getElementById("event-time-bar");
+        var rel_pos = Math.round( (bar_offset / $(this).width()) * scrubber.max );
+        console.log(rel_pos);
+        scrubber.value = rel_pos;
+        processor.leftVideo.currentTime = (scrubber.value + processor.leftVideo.frameOffset) / 30;
+        processor.rightVideo.currentTime = (scrubber.value + processor.rightVideo.frameOffset) / 30;
+        setTimeout(function(){
+            processor.draw();
+            eventHandler.draw();
+        }, 300);
+    });
     setTimeout(LoadAll, 1000);
 });
 
@@ -36,10 +48,42 @@ function pause()
     clearInterval(timer);
 }
 
+function sync()
+{
+    processor.sync();
+    
+    timer = setInterval(function(){
+        processor.run();
+        videoHandler.run();
+        eventHandler.run();
+    }, 1000/FRAMERATE);
+
+}
+
+function seekBack()
+{
+    videoHandler.seekFrame(processor.leftVideo, -1);
+    videoHandler.seekFrame(processor.rightVideo, -1);
+    setTimeout(function(){
+        processor.draw();
+        eventHandler.draw();
+    }, 300);
+}
+
+function seekForward()
+{
+    videoHandler.seekFrame(processor.leftVideo, 1);
+    videoHandler.seekFrame(processor.rightVideo, 1);
+    setTimeout(function(){
+        processor.draw();
+        eventHandler.draw();
+    }, 300);
+}
+
 function LoadAll()
 {
     processor = new Processor();
-    videoHandler = new VideoHandler(processor);
+    videoHandler = new VideoSettingsHandler(processor);
     eventHandler = new EventHandler();
 
 
@@ -49,7 +93,7 @@ function LoadAll()
         var json = new JsonHandler(document.getElementById("left-json").textContent, processor.leftVideo);
         if(json.handle != null)
             if(json.Event_QRCode() != null)
-            videoHandler.seekFrame(processor.leftVideo, json.Event_QRCode().frame);
+            videoHandler.seekFrameOffset(processor.leftVideo, json.Event_QRCode().frame);
 
         eventHandler.events = json.events;
     }
@@ -60,16 +104,16 @@ function LoadAll()
         var json = new JsonHandler(document.getElementById("right-json").textContent, processor.rightVideo);
         if(json.handle != null)
             if(json.Event_QRCode() != null)
-            videoHandler.seekFrame(processor.rightVideo, json.Event_QRCode().frame);
+            videoHandler.seekFrameOffset(processor.rightVideo, json.Event_QRCode().frame);
         eventHandler.events = json.events;
     }
 
     eventHandler.draw();
 }
 
-function SubmitForms()
+function SubmitMultipartForms(forms)
 {
-    $("#select-video, #upload-video").on("submit", function(e){
+    $(forms).on("submit", function(e){
         e.preventDefault();
 
         var data = new FormData($(this)[0]);

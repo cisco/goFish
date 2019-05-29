@@ -17,6 +17,10 @@
 #include <opencv2/imgcodecs.hpp>
 /*******************************/
 
+
+
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include <opencv2/tracking.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -31,7 +35,7 @@ using namespace cv;
 #define TRACKING
 #define THREADED
 
-#undef TRACKING
+//#undef TRACKING
 //#undef THREADED
 
 void HandleSignal(int);
@@ -63,7 +67,7 @@ int main()
             for(auto it = video_files.begin(); it != video_files.end(); ++it)
                 if((*it).find(jf) != string::npos)
                 {
-                    cout << "\"" << (*it) << "\" has already been processed!"<<endl;
+                   // cout << "\"" << (*it) << "\" has already been processed!"<<endl;
                     video_files.erase(it);
                     break;
                 }
@@ -93,7 +97,7 @@ int main()
 
 void HandleSignal(int signal)
 {
-    cout<<endl<< "Hey! Listen!"<<endl;
+    cout << endl << "Got signal: " << signal <<endl;
     exit(signal);
 }
 
@@ -175,24 +179,75 @@ void ProcessVideo(string file)
             DE.AddObject(detectQR->GetAsJSON());
         }
 
-        // TODO: This is test code to make sure that Event activity is added to JSON correctly. This should be moved and modified once
-        // fish detection is working.
-        if(currentFrame % 13 == 0)
-        {
-            activity = new ActivityEvent(frame, currentEvent);
-            activity->StartEvent(currentFrame);
-            activity->SetIsActive(false);
-            activity->EndEvent(currentFrame);
-            DE.AddObject(activity->GetAsJSON());
-            delete activity;
-            currentEvent++;
-        }
+       
 
         #ifdef TRACKING
         // Masking to find contours of moving objects.
         {
             bkgd_sub_ptr->apply(frame, mask);
+            
 
+            int morph_elem = 0;
+            int morph_size = 10, erode_size = 3;
+            Mat kernel = getStructuringElement( morph_elem, Size( 2*erode_size + 1, 2*erode_size+1 ), Point( erode_size, erode_size ) );
+            Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+
+            erode(mask, mask, kernel, Point(2, 2));
+            dilate(mask, mask, element, Point(1, 1));
+            morphologyEx( mask, mask, MORPH_CLOSE, element);
+
+            threshold(mask, mask, 250, 255, 3);
+
+            int thresh = 2000;
+            RNG rng(12345);
+
+            Mat canny_output;
+            vector<vector<Point>> contours;
+            vector<Vec4i> hierarchy;
+
+            // Detect edges using canny
+            Canny( mask, canny_output, thresh, thresh*2, 5);
+            findContours( canny_output, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_TC89_KCOS, Point(0, 0) );
+
+            Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
+            for( int i = 0; i< contours.size(); i++ )
+            {
+                Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+                drawContours( frame, contours, i, color, 2, 8, hierarchy, 0, Point() );
+            }
+
+             // TODO: This is test code to make sure that Event activity is added to JSON correctly. This should be moved and modified once
+            // fish detection is working.
+            if(!contours.empty())
+            {
+                if(!activity)
+                { 
+                    activity = new ActivityEvent(frame, currentEvent);
+                    activity->StartEvent(currentFrame);
+                    cout << "Starting Event" << endl;
+                }
+            }
+            else
+            {
+                if(activity)
+                {
+                    activity->SetIsActive(false);
+                    activity->EndEvent(currentFrame);
+                    DE.AddObject(activity->GetAsJSON());
+                    cout<< "Added event"<<endl;
+                    delete activity;
+                    activity = nullptr;
+                    currentEvent++;
+                }
+            }
+
+            //imshow("mask", mask);
+            //imshow( "Contours", frame );
+        }
+        
+        // Feature matching test.
+        {
+            /*
             int minHessian = 400;
             Ptr<xfeatures2d::SURF> detector = xfeatures2d::SURF::create(minHessian);
 
@@ -218,6 +273,7 @@ void ProcessVideo(string file)
             Mat img_matches;
             drawMatches(ref_image, keypoints_1, frame, keypoints_2, good_matches, img_matches, Scalar::all(-1),
                         Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+            */
             /* 
                 vector<KeyPoint> keypoints;
                 detector->detect(frame, keypoints);
@@ -240,10 +296,11 @@ void ProcessVideo(string file)
                 }     
             */ 
         }
-        #endif
+        
 
         // Concatenates videos together (could be useful for combining videos together in this app rather than the browser).
         {
+            /*
             int rows = max(frame.rows, frame.rows);
             int cols = frame.cols + frame.cols;
 
@@ -254,19 +311,27 @@ void ProcessVideo(string file)
             frame.copyTo(res(Rect(frame.cols,0,frame.cols, frame.rows)));
 
             imshow("Detection", res);
+            */
         }
 
         char c = (char)waitKey(25);
         if(c==27)
             break;
-    }
 
+        #endif
+    }
+    if(activity)
+    {
+        activity->SetIsActive(false);
+        activity->EndEvent(currentFrame);
+        DE.AddObject(activity->GetAsJSON());
+        cout<< "Added event"<<endl;
+        delete activity;
+        activity = nullptr;
+        currentEvent++;
+    }
     cout << "=== Finished processing \"" << vidFileName << "\" ===" << endl;
     
-    // Cleanup pointers
-    delete detectQR;
-    delete activity;
-
     cap.release();
     destroyAllWindows();
 
@@ -278,5 +343,18 @@ void ProcessVideo(string file)
     configFile.open (JSON_DIR "DE_" + vidFileName.substr(0, vidFileName.find_last_of(".")) + ".json");
     configFile << DE.GetJSON();
     configFile.close();
+
+    // Cleanup pointers
+    if(detectQR) 
+    {
+        delete detectQR;
+        detectQR = nullptr;
+    }
+   
+    if(activity)
+    {
+        delete activity;
+        activity = nullptr;
+    }
 }
 
