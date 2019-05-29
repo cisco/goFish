@@ -1,4 +1,6 @@
-class VideoHandler
+let FRAMERATE = 30;
+
+class VideoSettingsHandler
 {
     constructor(pcr)
     {
@@ -10,7 +12,7 @@ class VideoHandler
         this.fillVideoInfo(pcr.rightVideo);
     }
 
-    seekFrame(video, direction)
+    seekFrameOffset(video, direction)
     {
         if(video != null)
         {
@@ -18,13 +20,24 @@ class VideoHandler
             if(slider != null)
             {
                 video.frameOffset += direction;
-                video.frameOffset = Math.max(0, Math.min(video.frameOffset, Math.ceil(video.duration * 30)));
+                video.frameOffset = Math.max(0, Math.min(video.frameOffset, Math.ceil(video.duration * FRAMERATE)));
                 slider.value = video.frameOffset;
-                video.currentTime = parseFloat(slider.value) / 30;
-                video.maxFrame     = Math.ceil(video.duration * 30);
+                video.currentTime = parseFloat(slider.value) / FRAMERATE;
+                video.maxFrame     = Math.ceil(video.duration * FRAMERATE);
                 video.adjustedFrameSize = video.maxFrame - video.frameOffset;
                 this.fillVideoInfo(video);
             }
+        }
+    }
+
+    seekFrame(video, direction)
+    {
+        if(video != null)
+        {
+            video.currentTime += direction;
+            video.currentTime = Math.max(0, video.currentTime);
+            video.currentTime = Math.min(video.duration, video.currentTime);            
+            this.fillVideoInfo(video);
         }
     }
 
@@ -35,15 +48,15 @@ class VideoHandler
             var slider = document.getElementById(video.name + "-slider");
             if(slider != null)
             {
-                slider.max = Math.ceil(video.duration * 30);
+                slider.max = Math.ceil(video.duration * FRAMERATE);
                 video.frameOffset = parseFloat(slider.value);
-                video.maxFrame     = Math.ceil(video.duration * 30);
+                video.maxFrame     = Math.ceil(video.duration * FRAMERATE);
                 video.adjustedFrameSize = video.maxFrame - video.frameOffset;
                 
                 let self = this;
                 slider.oninput = function () {
                     video.frameOffset = parseFloat(this.value);
-                    video.currentTime = this.value / 30;
+                    video.currentTime = this.value / FRAMERATE;
                     video.adjustedFrameSize = video.maxFrame - video.frameOffset;
                     self.fillVideoInfo(video);
                 }
@@ -58,9 +71,9 @@ class VideoHandler
             var elem = document.getElementById(video.name + '-info');
             if(elem != null)
             {
-                elem.getElementsByClassName("time")[0].innerHTML = Math.round(video.currentTime * 30);
+                elem.getElementsByClassName("time")[0].innerHTML = Math.round(video.currentTime * FRAMERATE);
                 elem.getElementsByClassName("offset")[0].innerHTML = video.frameOffset
-                elem.getElementsByClassName("frames")[0].innerHTML = Math.ceil(video.duration * 30);
+                elem.getElementsByClassName("frames")[0].innerHTML = Math.ceil(video.duration * FRAMERATE);
                 elem.getElementsByClassName("duration")[0].innerHTML = video.duration;
             }
         }
@@ -108,12 +121,13 @@ class Processor
         this.leftVideo              = document.getElementById("left");
         this.rightVideo             = document.getElementById("right");
         this.canvas                 = document.getElementById("adjusted-video");
+
         let self = this;
         if(this.leftVideo != null)
         {
             this.leftVideo.name         = "left";
             this.leftVideo.frameOffset  = 0;
-            this.leftVideo.maxFrame     = Math.ceil(this.leftVideo.duration * 30);
+            this.leftVideo.maxFrame     = Math.ceil(this.leftVideo.duration * FRAMERATE);
             this.leftVideo.adjustedFrameSize = this.leftVideo.maxFrame - this.leftVideo.frameOffset;
 
             this.leftVideo.addEventListener("ended", function(){
@@ -124,7 +138,7 @@ class Processor
         {
             this.rightVideo.name        = "right";
             this.rightVideo.frameOffset = 0;
-            this.rightVideo.maxFrame    = Math.ceil(this.rightVideo.duration * 30);
+            this.rightVideo.maxFrame    = Math.ceil(this.rightVideo.duration * FRAMERATE);
             this.rightVideo.adjustedFrameSize = this.rightVideo.maxFrame - this.rightVideo.frameOffset;
 
             this.rightVideo.addEventListener("ended", function(){
@@ -142,23 +156,19 @@ class Processor
             if((this.leftVideo.paused && this.rightVideo.paused) || (this.leftVideo.ended && this.rightVideo.ended))
                 return;
 
-            function CurrentFrame(video) { return Math.ceil(video.currentTime * 30) - video.frameOffset; }
+            function CurrentFrame(video) { return Math.ceil(video.currentTime * FRAMERATE) - video.frameOffset; }
 
             var max_video = CurrentFrame(this.leftVideo) >= CurrentFrame(this.rightVideo) ? this.leftVideo : this.rightVideo;
             var min_video = max_video == this.leftVideo ? this.rightVideo : this.leftVideo;
             if( CurrentFrame(max_video) - CurrentFrame(min_video) > 1)
             {
-                console.log("Out of sync!");
+                console.log("Out of sync! Syncing...");
                 max_video.pause();
-                setTimeout(function(){max_video.play();}, (CurrentFrame(max_video) - CurrentFrame(min_video)) / 30); 
+                setTimeout(function(){max_video.play();}, (CurrentFrame(max_video) - CurrentFrame(min_video)) / FRAMERATE); 
             }
-            else console.log("synced");
 
             this.draw();
         }
-        //let self = this;
-        //this.timerHandle = setTimeout(function(){self.timerCallback()}, 0);
-        
     }
 
     draw()
@@ -169,18 +179,21 @@ class Processor
             if(this.leftVideo != null && this.rightVideo != null)
             {
                 // TODO: Replace these with a function that will draw the exact pixels with minimum loss.
-                context.drawImage(this.leftVideo, 0, 0, 320, this.canvas.height);
+                context.drawImage(this.leftVideo, 0, 0, this.canvas.width/2, this.canvas.height);
                 context.drawImage(this.rightVideo, this.canvas.width/2, 0, this.canvas.width/2, this.canvas.height);
 
                 // Calculate the length of the combined video.
                 var time = Math.min(this.leftVideo.adjustedFrameSize, this.rightVideo.adjustedFrameSize);
-                var scrubber = document.getElementById("scrubber");
+                var scrubber = document.getElementById("event-time-bar");
                 
                 scrubber.max = time;
+                var ctx = scrubber.getContext("2d");
+                ctx.scale(10, 1);
+                scrubber.height = 40;
                 
-                function adjustTime(video) { return (video.currentTime - (video.frameOffset / 30)) * 30; }
+                function adjustTime(video) { return ((video.currentTime * FRAMERATE) - (video.frameOffset)); }
                 scrubber.value = Math.max(adjustTime(this.leftVideo), adjustTime(this.rightVideo));
-                document.getElementById("adjusted-time").innerHTML = parseFloat(scrubber.value);
+                document.getElementById("adjusted-time").innerHTML = Math.ceil(parseFloat(scrubber.value));
             }
         }
     }
@@ -201,21 +214,21 @@ class Processor
         {
             if(this.leftVideo.ended || this.rightVideo.ended)
             {
-                this.leftVideo.currentTime = this.leftVideo.frameOffset / 30;
-                this.rightVideo.currentTime = this.rightVideo.frameOffset / 30;
+                this.leftVideo.currentTime = this.leftVideo.frameOffset / FRAMERATE;
+                this.rightVideo.currentTime = this.rightVideo.frameOffset / FRAMERATE;
             }
             this.leftVideo.play();
             this.rightVideo.play();
 
-            function CurrentFrame(video) { return Math.ceil(video.currentTime * 30) - video.frameOffset; }
+            function CurrentFrame(video) { return Math.ceil(video.currentTime * FRAMERATE) - video.frameOffset; }
 
             var max_video = CurrentFrame(this.leftVideo) >= CurrentFrame(this.rightVideo) ? this.leftVideo : this.rightVideo;
             var min_video = max_video === this.leftVideo ? this.rightVideo : this.leftVideo;
             if( CurrentFrame(max_video) > CurrentFrame(min_video)+1)
             {
                 max_video.pause();
-                max_video.currentTime = CurrentFrame(min_video) / 30;
-                setTimeout(function(){max_video.play();}, (CurrentFrame(max_video)-CurrentFrame(min_video))/30); 
+                max_video.currentTime = CurrentFrame(min_video) / FRAMERATE;
+                setTimeout(function(){max_video.play();}, (CurrentFrame(max_video)-CurrentFrame(min_video))/FRAMERATE); 
             }
 
            // this.timerCallback();
@@ -227,16 +240,16 @@ class Processor
         if(this.leftVideo != null && this.rightVideo != null)
         {
             this.pause();
-            this.leftVideo.currentTime = this.leftVideo.frameOffset / 30;
-            this.rightVideo.currentTime = this.rightVideo.frameOffset / 30;
+            this.leftVideo.currentTime = this.leftVideo.frameOffset / FRAMERATE;
+            this.rightVideo.currentTime = this.rightVideo.frameOffset / FRAMERATE;
             this.play();
         }
     }
 
     adjustVideo(diff)
     {
-        this.leftVideo.currentTime = (diff + this.leftVideo.frameOffset) / 30;
-        this.rightVideo.currentTime = (diff + this.rightVideo.frameOffset) / 30;
+        this.leftVideo.currentTime = (diff + this.leftVideo.frameOffset) / FRAMERATE;
+        this.rightVideo.currentTime = (diff + this.rightVideo.frameOffset) / FRAMERATE;
     }
 }
 
@@ -250,7 +263,7 @@ class JsonHandler
         this.events = []
         if(this.handle != null)
             if(this.handle.DetectedEvents.length > 0)
-                for(var i = 1; i < this.handle.DetectedEvents.length; i++)
+                for(var i = 1; i < this.handle.DetectedEvents.length+1; i++)
                     this.Event_Activity(i);
     }
 
@@ -259,7 +272,8 @@ class JsonHandler
         function QR(e){return e["Event_QRCode"];}
         if(this.handle != null)
             if(this.handle.DetectedEvents.length > 0)
-                return this.handle.DetectedEvents.find(QR)["Event_QRCode"];
+                if(this.handle.DetectedEvents.find(QR) != null)
+                    return this.handle.DetectedEvents.find(QR)["Event_QRCode"];
         return null;
     }
 
@@ -268,8 +282,9 @@ class JsonHandler
         if(this.handle != null)
         {
             function Activity(e){return e["Event_Activity_"+id];}
-            var event = this.handle.DetectedEvents.find(Activity)["Event_Activity_"+id];
-            this.events.push(new Event((event.frame_start/this.video.maxFrame), (event.frame_end/this.video.maxFrame)));
+            var event = this.handle.DetectedEvents.find(Activity) != null ? this.handle.DetectedEvents.find(Activity)["Event_Activity_"+id] : null;
+            if(event != null)
+                this.events.push(new Event(((event.frame_start - this.video.frameOffset )/ (this.video.maxFrame - this.video.frameOffset)), ((event.frame_end - this.video.frameOffset ) / (this.video.maxFrame - this.video.frameOffset))));
         }
     }
 }
@@ -288,8 +303,6 @@ class EventHandler
     run()
     {
         this.draw();
-     //   let self = this;
-      //  this.timerHandle = setTimeout(function(){self.timerCallback();}, 0);
     }
 
     clearTimer()
@@ -297,16 +310,17 @@ class EventHandler
         clearTimeout(this.timerHandle);
     }
 
-    drawEvent(start, end, colour)
+    drawLine(start, end, colour)
     {
         if(this.canvas != null)
         {
             var ctx = this.canvas.getContext('2d');
 
             ctx.beginPath(); 
-            ctx.moveTo(start, 0);
-            ctx.lineTo(start, this.canvas.width/2);
-            ctx.lineWidth = Math.abs(end - start);
+            ctx.moveTo(start + 0.5, 20);
+            ctx.lineTo(end + 0.5, 20);
+            ctx.lineWidth = this.canvas.height;
+//            ctx.lineWidth = Math.abs(end - start);
             ctx.strokeStyle = colour;
             ctx.stroke();
         }
@@ -322,12 +336,12 @@ class EventHandler
 
             // Draw events.
             for(var i = 0; i < this.events.length; i++)
-                this.drawEvent(this.events[i].frame_start * 640, this.events[i].frame_end * 640, this.events[i].colour);
+                this.drawLine((this.events[i].frame_start) * this.canvas.width, this.events[i].frame_end * this.canvas.width, this.events[i].colour);
 
             // Draw the current position in the video.
-            var scrubber = document.getElementById("scrubber");
-            var slider = (scrubber.value / scrubber.max) * 640;
-            this.drawEvent(slider, slider+1, "#FFFFFF");
+            var scrubber = document.getElementById("event-time-bar");
+            var slider = (scrubber.value / scrubber.max) * this.canvas.width;
+            this.drawLine(slider, slider+1, "#FFFFFF");
         }
     }
 

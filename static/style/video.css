@@ -16,7 +16,7 @@
 
 #adjusted-video {
     background: #C6C7CA ;
-    width: 100%;
+    max-width: 100%;
 }
 
 #event-time-bar {
