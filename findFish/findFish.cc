@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <csignal> 
+#include <algorithm>
 
 #include "resources/includes/JsonBuilder.h"
 #include "resources/includes/EventDetector.h"
@@ -16,14 +17,7 @@
 #include <opencv2/objdetect.hpp>
 #include <opencv2/imgcodecs.hpp>
 /*******************************/
-
-
-
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
 #include <opencv2/tracking.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
 
 using namespace std;
 using namespace cv;
@@ -35,12 +29,13 @@ using namespace cv;
 #define TRACKING
 #define THREADED
 
-//#undef TRACKING
+#undef TRACKING
 //#undef THREADED
 
 void HandleSignal(int);
 vector<string> GetVideosFromDir(string, vector<string>);
 void ProcessVideo(string);
+void CreateConcatVideo(string&, string&);
 
 int main()
 {
@@ -57,6 +52,7 @@ int main()
         auto json_files = GetVideosFromDir(JSON_DIR, json_filters);
         vector<string> vid_filters = {".mp4", ".MP4"};
         auto video_files = GetVideosFromDir(VIDEO_DIR, vid_filters);
+        std::sort(video_files.begin(), video_files.end());
 
         // This looks pretty heavy (and is), so consider refining this to reduce CPU processing.
         for(int i = 0; i < json_files.size(); i++)
@@ -87,6 +83,7 @@ int main()
 
         for(int i = 0; i < video_files.size(); i++)
             ProcessVideo(video_files[i]);
+            //CreateConcatVideo(video_files[i], video_files[(i+1) % video_files.size()]);
 
         #endif
 
@@ -178,7 +175,6 @@ void ProcessVideo(string file)
             detectQR->StartEvent(currentFrame);
             DE.AddObject(detectQR->GetAsJSON());
         }
-
        
 
         #ifdef TRACKING
@@ -186,17 +182,18 @@ void ProcessVideo(string file)
         {
             bkgd_sub_ptr->apply(frame, mask);
             
+            threshold(mask, mask, 250, 255, THRESH_BINARY);
 
             int morph_elem = 0;
-            int morph_size = 10, erode_size = 3;
+            int morph_size = 7, erode_size = 2;
             Mat kernel = getStructuringElement( morph_elem, Size( 2*erode_size + 1, 2*erode_size+1 ), Point( erode_size, erode_size ) );
             Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
 
-            erode(mask, mask, kernel, Point(2, 2));
-            dilate(mask, mask, element, Point(1, 1));
+            dilate(mask, mask, kernel, Point(1, 1));
             morphologyEx( mask, mask, MORPH_CLOSE, element);
+            erode(mask, mask, kernel, Point(0, 0));
 
-            threshold(mask, mask, 250, 255, 3);
+            medianBlur(mask, mask, 3);
 
             int thresh = 2000;
             RNG rng(12345);
@@ -204,7 +201,7 @@ void ProcessVideo(string file)
             Mat canny_output;
             vector<vector<Point>> contours;
             vector<Vec4i> hierarchy;
-
+            
             // Detect edges using canny
             Canny( mask, canny_output, thresh, thresh*2, 5);
             findContours( canny_output, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_TC89_KCOS, Point(0, 0) );
@@ -216,15 +213,12 @@ void ProcessVideo(string file)
                 drawContours( frame, contours, i, color, 2, 8, hierarchy, 0, Point() );
             }
 
-             // TODO: This is test code to make sure that Event activity is added to JSON correctly. This should be moved and modified once
-            // fish detection is working.
             if(!contours.empty())
             {
                 if(!activity)
                 { 
                     activity = new ActivityEvent(frame, currentEvent);
                     activity->StartEvent(currentFrame);
-                    cout << "Starting Event" << endl;
                 }
             }
             else
@@ -234,15 +228,14 @@ void ProcessVideo(string file)
                     activity->SetIsActive(false);
                     activity->EndEvent(currentFrame);
                     DE.AddObject(activity->GetAsJSON());
-                    cout<< "Added event"<<endl;
                     delete activity;
                     activity = nullptr;
                     currentEvent++;
                 }
             }
 
-            //imshow("mask", mask);
-            //imshow( "Contours", frame );
+            imshow("mask", mask);
+            imshow( "Contours", frame );
         }
         
         // Feature matching test.
@@ -325,7 +318,6 @@ void ProcessVideo(string file)
         activity->SetIsActive(false);
         activity->EndEvent(currentFrame);
         DE.AddObject(activity->GetAsJSON());
-        cout<< "Added event"<<endl;
         delete activity;
         activity = nullptr;
         currentEvent++;
@@ -358,3 +350,64 @@ void ProcessVideo(string file)
     }
 }
 
+
+void CreateConcatVideo(string& file1, string& file2)
+{
+    VideoCapture cap1(file1), cap2(file2);
+    if (!cap1.isOpened() || !cap2.isOpened()) {
+        cerr << "*** Could not open video file(s)" << endl;
+        return;
+    }
+
+    // Clean up the video file name.
+    {
+        // Now that we've opened the file, scrub it clean of directory names to get the tag name.
+        file1 = file1.substr(file1.find_last_of("/")+1, file1.length());
+        file1 = file1.substr(0, file1.find_last_of("_"));
+        file2 = file2.substr(file2.find_last_of("/")+1, file2.length());
+        file2 = file2.substr(0, file2.find_last_of("_"));
+    }
+
+    if(file1 == file2)
+    {
+        VideoWriter writer("./static/videos/"+file1+".mp4",
+        int(cap1.get(CAP_PROP_FOURCC)),
+        cap1.get(CAP_PROP_FPS), 
+        Size(cap1.get(CAP_PROP_FRAME_WIDTH) + cap2.get(CAP_PROP_FRAME_WIDTH),
+        max(cap1.get(CAP_PROP_FRAME_HEIGHT), cap2.get(CAP_PROP_FRAME_HEIGHT))), true);
+
+        auto totalFrames = max(cap1.get(cv::CAP_PROP_FRAME_COUNT), cap2.get(cv::CAP_PROP_FRAME_COUNT));
+        int currentFrame = 0;
+        while(true)
+        {
+            Mat frame1, frame2;
+            cap1.read(frame1);
+            cap2.read(frame2);
+            
+            if (frame1.empty() || frame2.empty()) continue;
+
+            currentFrame++;
+            if (currentFrame >= totalFrames) break;
+
+            int rows = max(frame1.rows, frame2.rows);
+            int cols = frame1.cols + frame2.cols;
+
+            Mat3b conc(rows, cols, Vec3b(0,0,0));
+            Mat3b res(rows, cols, Vec3b(0,0,0));
+
+            frame1.copyTo(res(Rect(0,0,frame1.cols, frame1.rows)));
+            frame2.copyTo(res(Rect(frame1.cols,0,frame2.cols, frame2.rows)));
+
+            imshow("Concatented", res);
+            writer << res;
+
+            char c = (char)waitKey(25);
+            if(c==27)
+                break;
+        }
+        cout<<"Done"<<endl;
+        cap1.release();
+        cap2.release();
+        destroyAllWindows();
+    }
+}

@@ -7,13 +7,16 @@
     
     <!-- External Scripts -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 
     <!-- External Links-->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="/resources/demos/style.css">
 
     <!-- Internal Scripts -->
     <script src="/static/scripts/ProcessVideo.js" type="text/javascript"></script>
-    <script src="/static/scripts/Canvas.js" type="text/javascript"></script>
     
     <!-- Internal Links -->
     <link rel="stylesheet" type="text/css" href="/static/style/ui.css">
@@ -23,57 +26,61 @@
 </head>
 <body>
     <div class="navbar">
-        <div>Fish Finder</div>
-        <ul></ul>
+        <div class="nav-header">Fish Finder</div>
+        <div class="dropdown">
+            <div class="nav-item"><i class="material-icons">&#xe63a;</i>&emsp;Select Videos</div>
+            <div class="dropdown-content">
+                <form method="post" enctype="multipart/form-data" id="select-video">
+                    <input type="file" name="select-video-1" /><br>
+                    <input type="file" name="select-video-2" /><br>
+                    <input type="submit" value="Select Videos" />
+                </form>
+            </div>
+        </div>
+        <div class="dropdown">
+            <div class="nav-item"><i class="material-icons">&#xe2c6;</i>&emsp;Upload Videos</div>
+            <div class="dropdown-content">
+                <form method="post" enctype="multipart/form-data" id="upload-video">
+                    <input type="file" name="upload-files" multiple><br>
+                    <input type="submit" value="Upload Videos" />
+                </form>
+            </div>
+        </div>
     </div>
     <div class="container">
-           
         <div id="main-video" class="panel">
-            <div class="panel-header">
-                <span>Adjusted Video</span>
-                <div class="dropdown panel-header">
-                    <i class="material-icons">&#xe04a;</i>
-                    <div class="dropdown-content">
-                        <div class="panel">
-                            <div class="panel-header">Select Videos</div>
-                            <div class="panel-body">
-                                <form method="post" enctype="multipart/form-data" id="select-video">
-                                    <input type="file" name="select-video-1" /><br>
-                                    <input type="file" name="select-video-2" /><br>
-                                    <input type="submit" value="Select Videos" />
-                                </form>
-                            </div>
-                        </div>
-        
-                        <div class="panel">
-                            <div class="panel-header">Upload Videos</div>
-                            <div class="panel-body">
-                                <form method="post" enctype="multipart/form-data" id="upload-video">
-                                    <input type="file" name="upload-files" multiple><br>
-                                    <input type="submit" value="Upload Videos" />
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
             <div class="panel-body">
-                <canvas id="adjusted-video" width="1280" height="480"></canvas>
+                <canvas id="adjusted-video" width="1066" height="400"></canvas>
                 <br>
                 <canvas id="event-time-bar" width="4000" height="40"></canvas>
                 <br>
                 <div id="adjusted-time"></div>
                 <div id="controls">
                     <button onclick="seekBack()"><i class="material-icons">&#xe045;</i></button>
-                    <button onclick="play()" alt="Play"><i class="material-icons">&#xe037;</i></button>
-                    <button onclick="pause()"><i class="material-icons">&#xe034;</i></button>
+                    <button id="play-pause"><i class="material-icons">&#xe037;</i></button>
                     <button onclick="sync()"><i class="material-icons">&#xe042;</i></button>
                     <button onclick="seekForward()"><i class="material-icons">&#xe044;</i></button>
                 </div>
             </div>
         </div>
 {{if .VideosLoaded}}
-        <div id="videos" class=panel>
+        <div id="info-panel" class="panel">
+            <div class="panel-header">Info</div>
+            <div class="panel-body">
+                <div>Total Events: <span id="total-events"></span></div>
+            </div>
+        </div>
+        <div id="tools" class="panel">
+            <div class="panel-header"><button class="window-btn" id="toolbar-shape"><i class="material-icons">&#xe5cf;</i></button></div>
+            <div class="panel-body">
+                <div class="toolbar">
+                    <button id="ruler" onclick="toolkit.SetMode(0, this)"><i class="material-icons">&#xe150;</i></button>
+                    <button id="clear-ruler" onclick="toolkit.SetMode(1, this)"><i class="material-icons">&#xe888;</i></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="videos" class=panel hidden>
             <div class="panel-header">Videos</div>
             <div class="panel-body" style="display: flex;">
                 <div id="left-video">
@@ -117,7 +124,8 @@
         </div>
 {{end}}
     </div>
-<script src="/static/scripts/Loader.js"></script>
+<script src="/static/scripts/Canvas.js" type="text/javascript"></script>
+<script src="/static/scripts/Loader.js" type="text/javascript"></script>
 <noscript>Whoops! It looks like your browser doesn't support JavaScript!</noscript>
 </body>
 </html>

@@ -7,13 +7,16 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
 
 func main() {
 	os.Setenv("PORT", "80")
+	os.Setenv("DB_PORT", "3306")
 	//go RunProcess("./FishFinder")
+	CreateDatabase()
 	StartServer()
 }
 
@@ -75,4 +78,13 @@ func RunProcess(instr string) {
 		// Try again to start the process.
 		RunProcess(instr)
 	}
+}
+
+func CreateDatabase() {
+	addr := os.Getenv("DB_PORT")
+	port, _ := strconv.Atoi(addr)
+	db := NewDatabase(port)
+
+	db.ConnectDB("127.0.0.1")
+	db.CreateDB("fishTest")
 }
