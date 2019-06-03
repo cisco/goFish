@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 // Server : Server object to handle HTTP requests.
@@ -82,7 +83,12 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 		if _, err := os.Stat("static/" + saveLocation); os.IsNotExist(err) {
 			os.Mkdir("static/"+saveLocation, 0777)
 		}
-		out, err := ioutil.TempFile("static/"+saveLocation, fileInfo.Name+"*"+fileInfo.Format)
+
+		var tag string
+		if tag = "A"; i%2 == 1 {
+			tag = "B"
+		}
+		out, err := os.Create("static/" + saveLocation + "/" + fileInfo.Name + "_" + tag + fileInfo.Format)
 
 		defer out.Close()
 		if err != nil {
@@ -149,9 +155,9 @@ func HandleVideoHTML(r *http.Request) interface{} {
 	// If we're not selecting video, then upload the videos instead.
 	if leftVideoName == "" && rightVideoName == "" {
 		log.Println(" Uploading files:")
-		//t := time.Now()
-		//UploadFiles(r, "upload-videos", "videos/"+t.Format("2006-01-02-030405"), FileInfo{"video-", ".mp4", 10 << 20})
-		UploadFiles(r, "upload-videos", "videos/", FileInfo{"V_", ".mp4", 10 << 20})
+		t := time.Now()
+		UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
+		//UploadFiles(r, "upload-videos", "videos/", FileInfo{"V_", ".mp4", 10 << 20})
 	} else {
 		log.Println(" Selecting files:")
 		log.Println(" > Left Video  : " + leftVideoName)

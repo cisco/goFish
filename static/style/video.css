@@ -4,19 +4,18 @@
 }
 
 #videos {
-    grid-column: 3 / span 8;
+    grid-column: 3 / 11;
 }
 
 #main-video {
     display: inline-block;
     text-align: center;
-    grid-column: 3 / span 8;
+    grid-column: 3 / 11;
     grid-row: 1;
 }
 
 #adjusted-video {
     background: #C6C7CA ;
-    max-width: 100%;
 }
 
 #event-time-bar {
@@ -24,6 +23,7 @@
     width: 100%;
     height: 2em;
     border-radius: 5px;
+    border: 1px solid #58585B ;
 }
 
 /* Controls */
@@ -56,11 +56,88 @@
     border-radius: 0 5px 5px 0;
 }
 
-#controls > button:hover {
-    background: #C4D6ED;
-}
-
 #controls > button:active {
     background: #097DBC;
 }
 /* End Controls */
+
+/* Toolkit */
+#tools {
+    position: absolute;
+}
+
+#tools.vertical {
+}
+
+#tools.vertical > div > .toolbar {
+    flex-direction: column;
+}
+
+.toolbar {
+    display: flex;
+    margin: -1em;
+}
+
+.toolbar > button:first-child {
+    background: #049FD9;
+    color: #FFFFFF;
+    padding: 0.5em 1em;
+    border: none;
+    border-radius: 0 0 0 8px !important;
+}
+
+.toolbar > button {
+    background: #049FD9;
+    color: #FFFFFF;
+    margin: 1px;
+    padding: 0.5em 1em;
+    border: none;
+}
+
+button.active {
+    background: #6CC04A !important;
+}
+
+.toolbar > button:last-child {
+    background: #049FD9;
+    color: #FFFFFF;
+    padding: 0.5em 1em;
+    border: none;
+    border-radius: 0 0 8px 0;
+}
+
+#tools.vertical > div > .toolbar > button:first-child {
+    border: none;
+    border-radius: 0 !important;
+}
+
+#tools.vertical > div > .toolbar > button {
+    margin: 1px;
+    padding: 0.75em;
+    border: none;
+}
+
+#tools.vertical > div > .toolbar > button:last-child {
+    border: none;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.toolbar > button:active, .toolbar > button.active:active {
+    background: #097DBC !important;
+}
+/* End Toolkit */
+
+#info-panel {
+    position: absolute;
+    grid-column: 11/13;
+    right: 0;
+}
+
+#info-panel > .panel-body {
+    overflow-y: scroll;
+    overflow-x: auto;
+}
+
+#info-panel > .panel-header:hover {
+    cursor: move;
+}

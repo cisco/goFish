@@ -83,13 +83,6 @@ class VideoSettingsHandler
     {
         this.fillVideoInfo(this.pcr.leftVideo);
         this.fillVideoInfo(this.pcr.rightVideo);
-       // let self = this;
-       // this.timerHandle = setTimeout(function(){self.timerCallback()}, 0);
-    }
-
-    clearTimer()
-    {
-        clearTimeout(this.timerHandle);
     }
 
     adjustMainVideo()
@@ -118,9 +111,10 @@ class Processor
 {
     constructor() 
     {
-        this.leftVideo              = document.getElementById("left");
-        this.rightVideo             = document.getElementById("right");
-        this.canvas                 = document.getElementById("adjusted-video");
+        this.leftVideo  = document.getElementById("left");
+        this.rightVideo = document.getElementById("right");
+        this.canvas     = document.getElementById("adjusted-video");
+        this.ended      = false;
 
         let self = this;
         if(this.leftVideo != null)
@@ -132,6 +126,13 @@ class Processor
 
             this.leftVideo.addEventListener("ended", function(){
                 self.rightVideo.pause()
+                self.ended = true;
+                if($("#play-pause").hasClass("active"))
+                {
+                    $("#play-pause").removeClass("active");
+                    $("#play-pause").children(".material-icons").html("&#xe037;");
+                    pause();
+                }
             });
         }
         if(this.rightVideo != null)
@@ -143,8 +144,15 @@ class Processor
 
             this.rightVideo.addEventListener("ended", function(){
                 self.leftVideo.pause();
-            });
-        }
+                self.ended = true;
+                if($("#play-pause").hasClass("active"))
+                {
+                    $("#play-pause").removeClass("active");
+                    $("#play-pause").children(".material-icons").html("&#xe037;");
+                    pause();
+                }
+                    });
+                }
 
         this.draw();
     }
@@ -190,10 +198,19 @@ class Processor
                 var ctx = scrubber.getContext("2d");
                 ctx.scale(10, 1);
                 scrubber.height = 40;
-                
-                function adjustTime(video) { return ((video.currentTime * FRAMERATE) - (video.frameOffset)); }
-                scrubber.value = Math.max(adjustTime(this.leftVideo), adjustTime(this.rightVideo));
-                document.getElementById("adjusted-time").innerHTML = Math.ceil(parseFloat(scrubber.value));
+
+                if ((scrubber.value / scrubber.max > this.leftVideo.currentTime / this.leftVideo.duration && !this.leftVideo.ended),
+                    (scrubber.value / scrubber.max > this.rightVideo.currentTime / this.rightVideo.duration && !this.rightVideo.ended))
+                {
+                    this.leftVideo.currentTime = (scrubber.value / 30) + (this.leftVideo.frameOffset / 30);
+                    this.rightVideo.currentTime = (scrubber.value / 30) + (this.rightVideo.frameOffset / 30);
+                }
+                else
+                {
+                    function adjustTime(video) { return ((video.currentTime * FRAMERATE) - (video.frameOffset)); }
+                    scrubber.value = Math.max(adjustTime(this.leftVideo), adjustTime(this.rightVideo));
+                    document.getElementById("adjusted-time").innerHTML = Math.ceil(parseFloat(scrubber.value));
+                }
             }
         }
     }
@@ -219,6 +236,13 @@ class Processor
             }
             this.leftVideo.play();
             this.rightVideo.play();
+            this.ended = false;
+
+
+            var scrubber = document.getElementById("event-time-bar");
+            function adjustTime(video) { return ((video.currentTime * FRAMERATE) - (video.frameOffset)); }
+            scrubber.value = Math.max(adjustTime(this.leftVideo), adjustTime(this.rightVideo));
+            document.getElementById("adjusted-time").innerHTML = Math.ceil(parseFloat(scrubber.value));
 
             function CurrentFrame(video) { return Math.ceil(video.currentTime * FRAMERATE) - video.frameOffset; }
 
@@ -262,9 +286,12 @@ class JsonHandler
         this.video = video;
         this.events = []
         if(this.handle != null)
+        {
+            if(this.Event_QRCode() != null) this.frameOffset = this.Event_QRCode().frame;
             if(this.handle.DetectedEvents.length > 0)
-                for(var i = 1; i < this.handle.DetectedEvents.length+1; i++)
+                for(var i = 1; i <= this.handle.DetectedEvents.length; i++)
                     this.Event_Activity(i);
+        }
     }
 
     Event_QRCode()
@@ -284,7 +311,7 @@ class JsonHandler
             function Activity(e){return e["Event_Activity_"+id];}
             var event = this.handle.DetectedEvents.find(Activity) != null ? this.handle.DetectedEvents.find(Activity)["Event_Activity_"+id] : null;
             if(event != null)
-                this.events.push(new Event(((event.frame_start - this.video.frameOffset )/ (this.video.maxFrame - this.video.frameOffset)), ((event.frame_end - this.video.frameOffset ) / (this.video.maxFrame - this.video.frameOffset))));
+                this.events.push(new Event(((event.frame_start - this.frameOffset )/ (this.video.maxFrame - this.frameOffset)), ((event.frame_end - this.video.frameOffset ) / (this.video.maxFrame - this.video.frameOffset))));
         }
     }
 }
@@ -294,20 +321,13 @@ class EventHandler
     constructor()
     {
         this.canvas = document.getElementById("event-time-bar");
-       /* this.canvas.addEventListener("mousedown", function(e){
-            alert(e.pageX);
-        });*/
         this.events = []
+        this.event_index = 0;
     }
 
     run()
     {
         this.draw();
-    }
-
-    clearTimer()
-    {
-        clearTimeout(this.timerHandle);
     }
 
     drawLine(start, end, colour)
@@ -320,7 +340,6 @@ class EventHandler
             ctx.moveTo(start + 0.5, 20);
             ctx.lineTo(end + 0.5, 20);
             ctx.lineWidth = this.canvas.height;
-//            ctx.lineWidth = Math.abs(end - start);
             ctx.strokeStyle = colour;
             ctx.stroke();
         }
@@ -338,10 +357,22 @@ class EventHandler
             for(var i = 0; i < this.events.length; i++)
                 this.drawLine((this.events[i].frame_start) * this.canvas.width, this.events[i].frame_end * this.canvas.width, this.events[i].colour);
 
-            // Draw the current position in the video.
+            // Draw the event_index position in the video.
             var scrubber = document.getElementById("event-time-bar");
             var slider = (scrubber.value / scrubber.max) * this.canvas.width;
-            this.drawLine(slider, slider+1, "#FFFFFF");
+            this.drawLine(slider, slider+5, "#FFFFFF");
+
+            if(this.events[this.event_index] != null)
+            {
+                if(this.events[this.event_index].frame_start * this.canvas.width <= slider && slider <= this.events[this.event_index].frame_end * this.canvas.width);
+                else if (slider / this.canvas.width > this.events[this.event_index].frame_end)
+                    if(this.events[this.event_index+1] != null && this.event_index + 1 < this.events.length)
+                    {
+                        scrubber.value = (this.events[this.event_index+1].frame_start * scrubber.max);
+                        console.log("Skipping to next Event");
+                        this.event_index++;
+                    }
+            }
         }
     }
 
