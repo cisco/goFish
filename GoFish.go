@@ -34,7 +34,8 @@ func StartServer() {
 
 	// Create the new server.
 	server := NewServer()
-	server.BuildHTMLTemplate("static/videos.html", HandleVideoHTML)
+	server.BuildHTMLTemplate("static/videos.html", "/", HandleVideoHTML)
+	server.BuildHTMLTemplate("static/videos.html", "/processing/", HandleRulerHTML)
 
 	handler := &http.Server{Addr: addr, Handler: server}
 
@@ -67,6 +68,7 @@ func RunProcess(instr string) {
 
 		// Start looping timer to check that the process is still runProcessning.
 		for {
+			time.Sleep(1 * time.Second)
 			_, err := syscall.Getpgid(cmd.Process.Pid)
 			if err != nil {
 				log.Println("!!! Process died! Starting again...")
@@ -85,6 +87,6 @@ func CreateDatabase() {
 	port, _ := strconv.Atoi(addr)
 	db := NewDatabase(port)
 
-	db.ConnectDB("127.0.0.1")
+	db.ConnectDB("127.0.0.1:" + addr)
 	db.CreateDB("fishTest")
 }

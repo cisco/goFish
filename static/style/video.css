@@ -141,3 +141,8 @@ button.active {
 #info-panel > .panel-header:hover {
     cursor: move;
 }
+
+#terminal-output {
+    grid-column: 3 / 11;
+    grid-row: span 2;
+}

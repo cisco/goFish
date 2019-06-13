@@ -40,10 +40,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.MUX.ServeHTTP(w, r)
 }
 
+// HandleHTTP : Wrapper for Server MUX Handle method.
+func (s *Server) HandleHTTP(dir string, fn func(w http.ResponseWriter, r *http.Request)) {
+	s.MUX.HandleFunc(dir, fn)
+}
+
 // BuildHTMLTemplate : Creates the HTML required based on submitted files.
-func (s *Server) BuildHTMLTemplate(file string, fn func(*http.Request) interface{}) {
+func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Request) interface{}) {
 	var tmpl = template.Must(template.ParseFiles(file))
-	s.MUX.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	s.MUX.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			tmpl.Execute(w, nil)
 			return
@@ -124,9 +129,9 @@ func GetFileName(r *http.Request, formField string) string {
 }
 
 // BuildHTMLTemplate : Creates the HTML required based on submitted files.
-func BuildHTMLTemplate(file string, fn func(*http.Request) interface{}) {
+func BuildHTMLTemplate(file string, fn func(*http.Request) interface{}, dir string) {
 	var tmpl = template.Must(template.ParseFiles(file))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			tmpl.Execute(w, nil)
 			return
@@ -150,38 +155,50 @@ type VideoInfo struct {
 // HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload
 // the files.
 func HandleVideoHTML(r *http.Request) interface{} {
-	var leftVideoName, rightVideoName = GetFileName(r, "select-video-1"), GetFileName(r, "select-video-2")
-
-	// If we're not selecting video, then upload the videos instead.
-	if leftVideoName == "" && rightVideoName == "" {
-		log.Println(" Uploading files:")
-		t := time.Now()
-		UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
-		//UploadFiles(r, "upload-videos", "videos/", FileInfo{"V_", ".mp4", 10 << 20})
-	} else {
-		log.Println(" Selecting files:")
-		log.Println(" > Left Video  : " + leftVideoName)
-		log.Println(" > Right Video : " + rightVideoName)
-	}
-
-	leftTag, rightTag := strings.TrimSuffix(strings.TrimPrefix(leftVideoName, "V_"), ".mp4"), strings.TrimSuffix(strings.TrimPrefix(rightVideoName, "V_"), ".mp4")
-	file, err := ioutil.ReadFile("static/video-info/DE_" + leftTag + ".json")
-	leftJSON, rightJSON := "", ""
+	err := r.ParseMultipartForm(10 << 20)
 	if err == nil {
-		leftJSON = string(file)
-	}
-	file, err = ioutil.ReadFile("static/video-info/DE_" + rightTag + ".json")
-	if err == nil {
-		rightJSON = string(file)
-	}
+		var leftVideoName, rightVideoName = GetFileName(r, "select-video-1"), GetFileName(r, "select-video-2")
 
-	return struct {
-		VideosLoaded   bool
-		LeftVideoInfo  VideoInfo
-		RightVideoInfo VideoInfo
-	}{
-		(leftVideoName != "") && (rightVideoName != ""),
-		VideoInfo{leftVideoName, leftTag, leftJSON},
-		VideoInfo{rightVideoName, rightTag, rightJSON},
+		// If we're not selecting video, then upload the videos instead.
+		if leftVideoName == "" && rightVideoName == "" {
+			log.Println(" Uploading files:")
+			t := time.Now()
+			UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
+			//UploadFiles(r, "upload-videos", "videos/", FileInfo{"V_", ".mp4", 10 << 20})
+		} else {
+			log.Println(" Selecting files:")
+			log.Println(" > Left Video  : " + leftVideoName)
+			log.Println(" > Right Video : " + rightVideoName)
+		}
+
+		leftTag, rightTag := strings.TrimSuffix(strings.TrimPrefix(leftVideoName, "V_"), ".mp4"), strings.TrimSuffix(strings.TrimPrefix(rightVideoName, "V_"), ".mp4")
+		file, err := ioutil.ReadFile("static/video-info/DE_" + leftTag + ".json")
+		leftJSON, rightJSON := "", ""
+		if err == nil {
+			leftJSON = string(file)
+		}
+		file, err = ioutil.ReadFile("static/video-info/DE_" + rightTag + ".json")
+		if err == nil {
+			rightJSON = string(file)
+		}
+
+		return struct {
+			VideosLoaded   bool
+			LeftVideoInfo  VideoInfo
+			RightVideoInfo VideoInfo
+		}{
+			(leftVideoName != "") && (rightVideoName != ""),
+			VideoInfo{leftVideoName, leftTag, leftJSON},
+			VideoInfo{rightVideoName, rightTag, rightJSON},
+		}
 	}
+	return struct{}{}
+}
+
+func HandleRulerHTML(r *http.Request) interface{} {
+	if r.Method == "POST" {
+		r.ParseForm()
+		log.Println(r.URL)
+	}
+	return struct{}{}
 }
