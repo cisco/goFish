@@ -18,8 +18,7 @@ func NewDatabase(port int) *Database {
 }
 
 func (db_ptr *Database) ConnectDB(url string) {
-	db, err := sql.Open("mysql", "root@tcp/")
-	log.Println(db.Ping())
+	db, err := sql.Open("mysql", "root:findingfish@tcp("+url+")/")
 	if err != nil {
 		log.Println(err)
 	} else {
@@ -30,7 +29,7 @@ func (db_ptr *Database) ConnectDB(url string) {
 
 func (db_ptr *Database) CreateDB(name string) {
 	if db_ptr.db != nil {
-		_, err := db_ptr.db.Exec("CREATE DATABASE " + name)
+		_, err := db_ptr.db.Exec("CREATE DATABASE IF NOT EXISTS " + name)
 
 		if err != nil {
 			log.Println(err)

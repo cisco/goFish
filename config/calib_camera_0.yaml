@@ -1,0 +1,16 @@
+%YAML:1.0
+---
+K: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 1.5552221950351397e+03, 0., 1824., 0., 1.5552221950351397e+03,
+       1368., 0., 0., 1. ]
+D: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ -2.0650346783086579e-01, 3.6313883204938856e-02, 0., 0., 0. ]
+grid_size: [ 19, 11 ]
+grid_square_size: 6.
+resolution: [ 3648, 2736 ]

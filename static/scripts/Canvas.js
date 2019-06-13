@@ -64,7 +64,24 @@ class Toolkit
                 this.left_rulers.push(new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#FF1144"));
             this.left_rulers[this.lruler_index].AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
             if(this.left_rulers[this.lruler_index].point_2 != null)
+            {
+                var text = "<dt>" + this.lruler_index + ": </dt>";
+                text += "<dd>x1 = " + this.left_rulers[this.lruler_index].point_1.x + "</dd>";
+                text += "<dd>y1 = " + Math.round(this.left_rulers[this.lruler_index].point_1.y) + "</dd>";
+                text += "<dd>x2 = " + this.left_rulers[this.lruler_index].point_2.x + "</dd>";
+                text += "<dd>y2 = " + Math.round(this.left_rulers[this.lruler_index].point_2.y) + "</dd>";
+                text += "<dd>Length = " + this.left_rulers[this.lruler_index].line.Length() + "</dd>";
+
+                $("#ruler-info").append(text);
+
+                var line = this.left_rulers[this.lruler_index].line;
+                var data = {'point1' : {'x' : line.start_point.x, 'y':line.start_point.y}, 'point2' : {'x' : line.end_point.x, 'y':line.end_point.y}};
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/processing/", true);
+                xhr.send(JSON.stringify(data));
+                
                 this.lruler_index++;
+            }
         }
         else
         {
@@ -136,8 +153,11 @@ class Line extends RenderObject
 
     Length()
     {
-        this.vector = new Point(Math.abs(this.end_point.x - this.start_point.x), Math.abs(this.end_point.y - this.start_point.y));
-        return Math.round(Math.sqrt(Math.pow(this.vector.x, 2) + Math.pow(this.vector.y, 2)) * 1000) / 1000;
+        if(this.start_point != null && this.end_point != null)
+        {
+            this.vector = new Point(Math.abs(this.end_point.x - this.start_point.x), Math.abs(this.end_point.y - this.start_point.y));
+            return Math.round(Math.sqrt(Math.pow(this.vector.x, 2) + Math.pow(this.vector.y, 2)) * 1000) / 1000;
+        }
     }
 }
 
@@ -154,9 +174,15 @@ class Ruler
     AddPoint(x, y)
     {
         if(this.point_1 != null)
+        {
             this.point_2 = new Point(x, y);
+            this.line.end_point = this.point_2;
+        }
         else
+        {
             this.point_1 = new Point(x, y);
+            this.line.start_point = this.point_1;
+        }
     }
 
     Render(canvas)
@@ -165,11 +191,6 @@ class Ruler
         var context = canvas.getContext('2d');
         context.fillStyle = this.colour;
         context.strokeStyle = this.colour;
-
-        if(this.point_1 != null && this.line.start_point == null)
-            this.line.start_point = this.point_1;
-        if(this.point_2 != null && this.line.end_point == null)
-            this.line.end_point = this.point_2;
         
         if(this.line != null) this.line.Render(canvas);
         if(this.point_1 != null) this.point_1.Render(canvas);

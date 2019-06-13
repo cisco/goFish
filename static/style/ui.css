@@ -87,10 +87,6 @@ body {
     overflow: hidden;
     white-space: nowrap;
 }
-.nav-item:hover {
-    color: #CCCCCC;
-    content: "S";
-}
 
 .dropdown-content {
     overflow: hidden;
@@ -123,4 +119,10 @@ body {
 form {
     margin: 0;
     padding: 10px;
+}
+
+dd {
+    border-left: 1px solid #000000;
+    margin-left: 0.5em;
+    padding-left: 0.5em;
 }
