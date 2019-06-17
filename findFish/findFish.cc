@@ -10,16 +10,19 @@
 #include "resources/includes/JsonBuilder.h"
 #include "resources/includes/EventDetector.h"
 
+#include "resources/includes/Calibration.h"
+
 // Hoping to move the OpenCV out of this file.
 
 /* Included in EventDetector.h */
 #include <opencv2/opencv.hpp>
 #include <opencv2/objdetect.hpp>
 #include <opencv2/imgcodecs.hpp>
+/*******************************/
 #include <opencv2/stereo.hpp>
 #include <opencv2/calib3d.hpp>
-/*******************************/
 #include <opencv2/tracking.hpp>
+#include <opencv2/ximgproc.hpp>
 
 using namespace std;
 using namespace cv;
@@ -34,7 +37,11 @@ using namespace cv;
 void HandleSignal(int);
 vector<string> GetVideosFromDir(string, vector<string>);
 void ProcessVideo(string);
+
+Mat ConcatenateMatrices(Mat&, Mat&);
 void CreateConcatVideo(string&, string&);
+
+void TriangulateSelectedPoints();
 void ReadVectorOfVector(FileStorage&, string, vector<vector<Point2f>>&);
 
 int main()
@@ -260,6 +267,21 @@ void ProcessVideo(string file)
     }
 }
 
+
+Mat ConcatenateMatrices(Mat& left_mat, Mat& right_mat)
+{
+    int rows = max(left_mat.rows, right_mat.rows);
+    int cols = left_mat.cols + right_mat.cols;
+
+    Mat3b conc(rows, cols, Vec3b(0, 0, 0));
+    Mat3b res(rows, cols, Vec3b(0, 0, 0));
+
+    left_mat.copyTo(res(Rect(0, 0, left_mat.cols, left_mat.rows)));
+    right_mat.copyTo(res(Rect(left_mat.cols, 0, right_mat.cols, right_mat.rows)));
+    
+    return std::move(res);
+}
+
 void CreateConcatVideo(string& file1, string& file2)
 {
     VideoCapture cap1(file1), cap2(file2);
@@ -278,13 +300,14 @@ void CreateConcatVideo(string& file1, string& file2)
     }
 
     if (file1 == file2) {
-      /*   VideoWriter writer("./static/videos/" + file1 + ".mp4",
-                           int(cap1.get(CAP_PROP_FOURCC)),
-                           cap1.get(CAP_PROP_FPS),
-                           Size(cap1.get(CAP_PROP_FRAME_WIDTH) + cap2.get(CAP_PROP_FRAME_WIDTH),
-                                max(cap1.get(CAP_PROP_FRAME_HEIGHT), cap2.get(CAP_PROP_FRAME_HEIGHT))),
-                           true);
-*/
+        /*   
+            VideoWriter writer("./static/videos/" + file1 + ".mp4",
+            int(cap1.get(CAP_PROP_FOURCC)),
+            cap1.get(CAP_PROP_FPS),
+            Size(cap1.get(CAP_PROP_FRAME_WIDTH) + cap2.get(CAP_PROP_FRAME_WIDTH),
+                max(cap1.get(CAP_PROP_FRAME_HEIGHT), cap2.get(CAP_PROP_FRAME_HEIGHT))),
+            true);
+        */
         auto totalFrames = max(cap1.get(cv::CAP_PROP_FRAME_COUNT), cap2.get(cv::CAP_PROP_FRAME_COUNT));
         int currentFrame = 0;
         while (true) 
@@ -299,6 +322,8 @@ void CreateConcatVideo(string& file1, string& file2)
             currentFrame++;
             if (currentFrame >= totalFrames)
                 break;
+
+            
 
             // Disparity
             {
@@ -319,51 +344,22 @@ void CreateConcatVideo(string& file1, string& file2)
                 Mat disparity;
 
                 Mat grey1, grey2;
-                cvtColor(frame1, grey1, COLOR_BGR2GRAY);
-                cvtColor(frame2, grey2, COLOR_BGR2GRAY);
+                cvtColor(uframe1, grey1, COLOR_BGR2GRAY);
+                cvtColor(uframe2, grey2, COLOR_BGR2GRAY);
                 SM->compute(grey1, grey2, disparity);
-
-                Mat norm_disp;
-                normalize(disparity, norm_disp, 1, 0, NORM_MINMAX, CV_32F);
 
                 Mat D;
                 float b = 65.f; // mm
                 float f = 17.f; // mm
 
-                D = (b*f)/norm_disp;
+                D = (b*f)/disparity;
                 imshow("Disparity DIstance", D);
             }
 
-            // Get keypoints from browser.
-            {
-                vector<vector<Point2f>> keypoints_l, keypoints_r;
-                {
-                    FileStorage fs("config/measure_points_left.yaml", FileStorage::READ);
-                    ReadVectorOfVector(fs, "keypoints", keypoints_l);
-                }
-                {
-                    FileStorage fs("config/measure_points_right.yaml", FileStorage::READ);
-                    ReadVectorOfVector(fs, "keypoints", keypoints_r);
-                }
-
-
-            }
-
-            // Concatenate videos.
-            {
-                int rows = max(frame1.rows, frame2.rows);
-                int cols = frame1.cols + frame2.cols;
-
-                Mat3b conc(rows, cols, Vec3b(0, 0, 0));
-                Mat3b res(rows, cols, Vec3b(0, 0, 0));
-
-                frame1.copyTo(res(Rect(0, 0, frame1.cols, frame1.rows)));
-                frame2.copyTo(res(Rect(frame1.cols, 0, frame2.cols, frame2.rows)));
-                
-                imshow("Concatented", res);
-                //writer << res;
-            }
-
+            Mat res = ConcatenateMatrices(frame1, frame2);
+            imshow("Concatented", res);
+            
+            //writer << res;
 
             char c = (char)waitKey(25);
             if (c == 27)
@@ -373,6 +369,28 @@ void CreateConcatVideo(string& file1, string& file2)
         cap1.release();
         cap2.release();
         destroyAllWindows();
+    }
+}
+
+void TriangulateSelectedPoints()
+{
+    // Get keypoints saved from browser.
+    {
+        Calibration::Input input;
+        vector<vector<Point2f> > keypoints_l, keypoints_r;
+        {
+            FileStorage fs("config/measure_points_left.yaml", FileStorage::READ);
+            ReadVectorOfVector(fs, "keypoints", keypoints_l);
+            input.image_points[0] = keypoints_l;
+        }
+        {
+            FileStorage fs("config/measure_points_right.yaml", FileStorage::READ);
+            ReadVectorOfVector(fs, "keypoints", keypoints_r);
+            input.image_points[1] = keypoints_r;
+        }
+
+        Calibration* calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
+        calib->ReadCalibration();
     }
 }
 

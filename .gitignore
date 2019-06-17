@@ -36,5 +36,4 @@
 static/videos/
 static/videos-info/
 .vscode/
-findFish/CameraCalibration/
 *.yaml
