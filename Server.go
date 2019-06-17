@@ -1,12 +1,15 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -36,19 +39,19 @@ func NewServer(args ...func(*Server)) *Server {
 }
 
 // ServerHTTP : Wrapper for the Server MUX ServeHTTP method.
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.MUX.ServeHTTP(w, r)
+func (outVector *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	outVector.MUX.ServeHTTP(w, r)
 }
 
 // HandleHTTP : Wrapper for Server MUX Handle method.
-func (s *Server) HandleHTTP(dir string, fn func(w http.ResponseWriter, r *http.Request)) {
-	s.MUX.HandleFunc(dir, fn)
+func (outVector *Server) HandleHTTP(dir string, fn func(w http.ResponseWriter, r *http.Request)) {
+	outVector.MUX.HandleFunc(dir, fn)
 }
 
 // BuildHTMLTemplate : Creates the HTML required based on submitted files.
-func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Request) interface{}) {
+func (outVector *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Request) interface{}) {
 	var tmpl = template.Must(template.ParseFiles(file))
-	s.MUX.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
+	outVector.MUX.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			tmpl.Execute(w, nil)
 			return
@@ -197,8 +200,54 @@ func HandleVideoHTML(r *http.Request) interface{} {
 
 func HandleRulerHTML(r *http.Request) interface{} {
 	if r.Method == "POST" {
-		r.ParseForm()
-		log.Println(r.URL)
+		decoder := json.NewDecoder(r.Body)
+		var d interface{}
+		decoder.Decode(&d)
+
+		// Try to open the file. If it doesn't exist, create it, and write a default header.
+		header := []byte("%YAML:1.0\n---")
+		file, err := os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			log.Println(err)
+			file, err = os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_CREATE|os.O_WRONLY, 0600)
+			if err != nil {
+				log.Println(err)
+			} else {
+				file.Write(header)
+			}
+		}
+
+		// Check to see if this file already contains data.
+		temp, err := ioutil.ReadFile("config/measure_points_" + strings.TrimPrefix(r.URL.Path, "/processing/") + ".yaml")
+		s := string(temp)
+		name := "\nkeypoints:"
+		if !strings.Contains(s, name) {
+			file.Write([]byte(name))
+		}
+
+		// Build the formatted string of points to insert into the YAML file.
+		outVector := ""
+		for k, v := range d.(map[string]interface{}) {
+			keys := make([]string, 0, len(v.(map[string]interface{})))
+			for k := range v.(map[string]interface{}) {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			m := v.(map[string]interface{})
+			outVector += "\n\u0020\u0020\u0020" + k + ": [ "
+			for i, k := range keys {
+				outVector += fmt.Sprintf("%.3f", (m[k].(float64)))
+				if i != len(keys)-1 {
+					outVector += ", "
+				}
+			}
+			outVector += " ]"
+		}
+		outVector = strings.TrimRight(outVector, ",")
+		outVector += ""
+
+		file.Write([]byte(outVector))
+
 	}
 	return struct{}{}
 }

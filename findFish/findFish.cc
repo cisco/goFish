@@ -35,6 +35,7 @@ void HandleSignal(int);
 vector<string> GetVideosFromDir(string, vector<string>);
 void ProcessVideo(string);
 void CreateConcatVideo(string&, string&);
+void ReadVectorOfVector(FileStorage&, string, vector<vector<Point2f>>&);
 
 int main()
 {
@@ -299,23 +300,54 @@ void CreateConcatVideo(string& file1, string& file2)
             if (currentFrame >= totalFrames)
                 break;
 
-            Ptr<cv::StereoBM> SM = StereoBM::create(16, 5);
-            Mat disparity;
+            // Disparity
+            {
+                Mat K1, K2, D1, D2;
+                FileStorage fs("config/StereoCalibration.yaml", FileStorage::READ);
+                fs["K1"] >> K1;
+                fs["D1"] >> D1;
+                fs["K2"] >> K2;
+                fs["D2"] >> D2;
 
-            Mat grey1, grey2;
-            cvtColor(frame1, grey1, COLOR_BGR2GRAY);
-            cvtColor(frame2, grey2, COLOR_BGR2GRAY);
-            SM->compute(grey1, grey2, disparity);
+                Mat uframe1, uframe2;
+                undistort(frame1, uframe1, K1, D1);
+                undistort(frame2, uframe2, K2, D2);
+                frame1 = uframe1;
+                frame2 = uframe2;
 
-            Mat norm_disp;
-            normalize(disparity, norm_disp, 1, 0, NORM_MINMAX, CV_32F);
+                Ptr<cv::StereoBM> SM = StereoBM::create(160, 5);
+                Mat disparity;
 
-            Mat D;
-            float b = 65.f; // mm
-            float f = 17.f; // mm
+                Mat grey1, grey2;
+                cvtColor(frame1, grey1, COLOR_BGR2GRAY);
+                cvtColor(frame2, grey2, COLOR_BGR2GRAY);
+                SM->compute(grey1, grey2, disparity);
 
-            D = (b*f)/norm_disp;
-            imshow("Disparity DIstance", D);
+                Mat norm_disp;
+                normalize(disparity, norm_disp, 1, 0, NORM_MINMAX, CV_32F);
+
+                Mat D;
+                float b = 65.f; // mm
+                float f = 17.f; // mm
+
+                D = (b*f)/norm_disp;
+                imshow("Disparity DIstance", D);
+            }
+
+            // Get keypoints from browser.
+            {
+                vector<vector<Point2f>> keypoints_l, keypoints_r;
+                {
+                    FileStorage fs("config/measure_points_left.yaml", FileStorage::READ);
+                    ReadVectorOfVector(fs, "keypoints", keypoints_l);
+                }
+                {
+                    FileStorage fs("config/measure_points_right.yaml", FileStorage::READ);
+                    ReadVectorOfVector(fs, "keypoints", keypoints_r);
+                }
+
+
+            }
 
             // Concatenate videos.
             {
@@ -342,4 +374,22 @@ void CreateConcatVideo(string& file1, string& file2)
         cap2.release();
         destroyAllWindows();
     }
+}
+
+void ReadVectorOfVector(FileStorage &fns, string name, vector<vector<Point2f>> &data)
+{
+     data.clear();
+     FileNode fn = fns[name];
+     if (fn.empty()){
+	  return;
+     }
+
+     FileNodeIterator current = fn.begin(), it_end = fn.end();
+     for (; current != it_end; ++current)
+     {
+	  vector<Point2f> tmp;
+	  FileNode item = *current;
+	  item >> tmp;
+	  data.push_back(tmp);
+     }
 }
