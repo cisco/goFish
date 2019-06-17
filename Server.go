@@ -198,6 +198,7 @@ func HandleVideoHTML(r *http.Request) interface{} {
 	return struct{}{}
 }
 
+// HandleRulerHTML : Saves points gotten in browser to a YAML file to be read by an OpenCV program to triangulate the points.
 func HandleRulerHTML(r *http.Request) interface{} {
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)

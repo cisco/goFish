@@ -65,6 +65,7 @@ class Toolkit
             this.left_rulers[this.lruler_index].AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
             if(this.left_rulers[this.lruler_index].point_2 != null)
             {
+                /*
                 // Add diagnostic info to info panel.
                 {
                     var text = "<dt>" + this.lruler_index + ": </dt>";
@@ -76,6 +77,7 @@ class Toolkit
                 
                     $("#ruler-info").append(text);
                 }
+                */
 
                 // Post the ruler info to the server to be processed.
                 {
@@ -95,7 +97,7 @@ class Toolkit
         else
         {
             if(this.right_rulers[this.rruler_index] == null) 
-                this.right_rulers.push(new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#3333FF"));
+                this.right_rulers.push(new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#40e0d0"));
             this.right_rulers[this.rruler_index].AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
             if(this.right_rulers[this.rruler_index].point_2 != null)
             {
@@ -103,7 +105,9 @@ class Toolkit
                 {
                     var line = this.right_rulers[this.rruler_index].line;
                     var name = 'P'+this.rruler_index;
-                    var data = "{ \"" + name + '0' + "\" : {\"x\" :" + line.start_point.x +", \"y\":"+line.start_point.y+"}, \"" + name+'1' +"\" : {\"x\" :" + line.end_point.x + ", \"y\":" + line.end_point.y + "}}";
+                    var sx = (line.start_point.x - 533);
+                    var ex = (line.end_point.x - 533);
+                    var data = "{ \"" + name + '0' + "\" : {\"x\" :" + sx +", \"y\":"+line.start_point.y+"}, \"" + name+'1' +"\" : {\"x\" :" + ex + ", \"y\":" + line.end_point.y + "}}";
                     
                     var xhr = new XMLHttpRequest();
                     xhr.open("POST", "/processing/right");
