@@ -65,21 +65,30 @@ class Toolkit
             this.left_rulers[this.lruler_index].AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
             if(this.left_rulers[this.lruler_index].point_2 != null)
             {
-                var text = "<dt>" + this.lruler_index + ": </dt>";
-                text += "<dd>x1 = " + this.left_rulers[this.lruler_index].point_1.x + "</dd>";
-                text += "<dd>y1 = " + Math.round(this.left_rulers[this.lruler_index].point_1.y) + "</dd>";
-                text += "<dd>x2 = " + this.left_rulers[this.lruler_index].point_2.x + "</dd>";
-                text += "<dd>y2 = " + Math.round(this.left_rulers[this.lruler_index].point_2.y) + "</dd>";
-                text += "<dd>Length = " + this.left_rulers[this.lruler_index].line.Length() + "</dd>";
-
-                $("#ruler-info").append(text);
-
-                var line = this.left_rulers[this.lruler_index].line;
-                var data = {'point1' : {'x' : line.start_point.x, 'y':line.start_point.y}, 'point2' : {'x' : line.end_point.x, 'y':line.end_point.y}};
-                var xhr = new XMLHttpRequest();
-                xhr.open("POST", "/processing/", true);
-                xhr.send(JSON.stringify(data));
+                // Add diagnostic info to info panel.
+                {
+                    var text = "<dt>" + this.lruler_index + ": </dt>";
+                    text += "<dd>x1 = " + this.left_rulers[this.lruler_index].point_1.x + "</dd>";
+                    text += "<dd>y1 = " + Math.round(this.left_rulers[this.lruler_index].point_1.y) + "</dd>";
+                    text += "<dd>x2 = " + this.left_rulers[this.lruler_index].point_2.x + "</dd>";
+                    text += "<dd>y2 = " + Math.round(this.left_rulers[this.lruler_index].point_2.y) + "</dd>";
+                    text += "<dd>Length = " + this.left_rulers[this.lruler_index].line.Length() + "</dd>";
                 
+                    $("#ruler-info").append(text);
+                }
+
+                // Post the ruler info to the server to be processed.
+                {
+                    var line = this.left_rulers[this.lruler_index].line;
+                    var name = 'P'+this.lruler_index;
+                    var data = "{ \"" + name + '0' + "\" : {\"x\" :" + line.start_point.x +", \"y\":"+line.start_point.y+"}, \"" + name+'1' +"\" : {\"x\" :" + line.end_point.x + ", \"y\":" + line.end_point.y + "}}";
+                    
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("POST", "/processing/left");
+                    xhr.setRequestHeader("Content-Type", "application/json");                
+                    xhr.send(data);
+                }
+
                 this.lruler_index++;
             }
         }
@@ -89,7 +98,21 @@ class Toolkit
                 this.right_rulers.push(new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#3333FF"));
             this.right_rulers[this.rruler_index].AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
             if(this.right_rulers[this.rruler_index].point_2 != null)
+            {
+                // Post the ruler info to the server to be processed.
+                {
+                    var line = this.right_rulers[this.rruler_index].line;
+                    var name = 'P'+this.rruler_index;
+                    var data = "{ \"" + name + '0' + "\" : {\"x\" :" + line.start_point.x +", \"y\":"+line.start_point.y+"}, \"" + name+'1' +"\" : {\"x\" :" + line.end_point.x + ", \"y\":" + line.end_point.y + "}}";
+                    
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("POST", "/processing/right");
+                    xhr.setRequestHeader("Content-Type", "application/json");                
+                    xhr.send(data);
+                }
+
                 this.rruler_index++;
+            }
         }
     }
 }
