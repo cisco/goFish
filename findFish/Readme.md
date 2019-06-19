@@ -1,18 +1,21 @@
 # Notes on how to build and run
 
-# Depdnencies
+# Dependencies
 
-Need version of openCV >= 4.0.0 
+Need version of OpenCV >= 4.0.0 
 
 # Build with
 
-mkdir build
-cd build
-cmake ..
-make
-findFish
+- ```mkdir build```
+- ```cd build```
+- ```cmake ..```
+- ```make```
+
+# Run
+
+```findFish```
 
 # Format code with
 
-clang-format -i *.cc *.h
+```clang-format -i *.cc *.h```
 

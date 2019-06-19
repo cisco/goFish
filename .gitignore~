@@ -37,4 +37,3 @@ static/videos/
 static/videos-info/
 .vscode/
 *.yaml
-static/proc_videos/

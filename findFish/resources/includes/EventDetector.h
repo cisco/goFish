@@ -12,7 +12,7 @@
 class EventBuilder
 {
  public:
-    EventBuilder() : json_object{JSON("")} {}
+    EventBuilder() : start_frame{ -1 }, end_frame{ -1 }, json_object{JSON("")} {}
     EventBuilder(cv::Mat& frame);
     virtual ~EventBuilder() {}
 
@@ -47,7 +47,7 @@ class QREvent : public EventBuilder
 class ActivityEvent : public EventBuilder
 {
  public:
-    ActivityEvent(cv::Mat& frame, int id);
+    ActivityEvent(int id, int&, int&);
     virtual ~ActivityEvent() {}
 
     virtual void StartEvent(int&) override;
