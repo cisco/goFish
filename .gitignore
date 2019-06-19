@@ -34,7 +34,7 @@
 # Extra files
 .DS_Store
 static/videos/
-static/videos-info/
+static/video-info/
 .vscode/
 *.yaml
 static/proc_videos/
