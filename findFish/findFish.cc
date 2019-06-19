@@ -2,7 +2,6 @@
 #include <fstream>
 #include <dirent.h>
 #include <thread>
-#include <map>
 #include <vector>
 #include <csignal>
 #include <algorithm>
@@ -225,6 +224,11 @@ void ProcessVideo(std::string file1, std::string file2)
                 {
                     delete detectQR_right;
                     detectQR_right = nullptr;
+                }
+                if(calib)
+                {
+                    delete calib;
+                    calib = nullptr;
                 }
             }
         }

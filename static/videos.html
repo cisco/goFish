@@ -30,12 +30,13 @@
     <div class="navbar">
         <div class="nav-header">Fish Finder</div>
         <div class="dropdown">
-            <div class="nav-item"><i class="material-icons">&#xe63a;</i>&emsp;Select Videos</div>
+            <div class="nav-item"><i class="material-icons">&#xe63a;</i>&emsp;Select Video</div>
             <div class="dropdown-content">
                 <form method="post" enctype="multipart/form-data" id="select-video">
-                    <input type="file" name="select-video-1" /><br>
-                    <input type="file" name="select-video-2" /><br>
-                    <input type="submit" value="Select Videos" />
+                    <!--input type="file" name="select-video-1"  /><br-->
+                    <!--input type="file" name="select-video-2"  /><br-->
+                    <input type="file" name="select-video"    /><br>
+                    <input type="submit" value="Select Video" />
                 </form>
             </div>
         </div>
@@ -58,10 +59,9 @@
                 <br>
                 <div id="adjusted-time"></div>
                 <div id="controls">
-                    <button onclick="seekBack()"><i class="material-icons">&#xe045;</i></button>
+                    <button onclick="SeekBack()"><i class="material-icons">&#xe045;</i></button>
                     <button id="play-pause"><i class="material-icons">&#xe037;</i></button>
-                    <button onclick="sync()"><i class="material-icons">&#xe042;</i></button>
-                    <button onclick="seekForward()"><i class="material-icons">&#xe044;</i></button>
+                    <button onclick="SeekForward()"><i class="material-icons">&#xe044;</i></button>
                 </div>
             </div>
         </div>
@@ -88,55 +88,16 @@
                 </div>
             </div>
         </div>
-        <div id="terminal-output" class=panel>
-            <div class="panel-header"><i class="material-icons">&#xe30c;</i></div>
-            <div class="panel-body">
-                <pre>
-                </pre>
-            </div>
-        </div>
         <div id="videos" class=panel hidden>
             <div class="panel-header">Videos</div>
             <div class="panel-body" style="display: flex;">
-                <div id="left-video">
-                    <video width="320" height="240" controls class="video" id="left">
-                        <source src="/static/videos/{{.LeftVideoInfo.Name}}" type="video/mp4">
+                <div id="selected-video">
+                    <video width="320" height="240" controls class="video" id="selected">
+                        <source src="/static/proc_videos/{{.VideoInfo.Name}}" type="video/mp4">
                         Video tag is not supported by your current browser.
                     </video>
-                    <br>
-                    <button onclick="videoHandler.seekFrame(processor.leftVideo, -1)">
-                        <</button> <button onclick="videoHandler.seekFrame(processor.leftVideo, 1)">>
-                    </button>
-                    <br>
-                    <input type="range" value="0" min="0" max="0" id="left-slider" style="width:320px;">
-                    <div class="panel-body" id="left-info">
-                        <strong>Frame: </strong><span class="time"></span><br>
-                        <strong>Frame Offset: </strong><span class="offset"></span><br>
-                        <strong>Frames: </strong><span class="frames"></span><br>
-                        <strong>Duration: </strong><span class="duration"></span><br>
-                    </div>
-
                 </div>
-                <div id="left-json" hidden>{{.LeftVideoInfo.JSON}}</div>
-                <div id="right-video">
-                    <video width="320" height="240" controls class="video" id="right">
-                        <source src="/static/videos/{{.RightVideoInfo.Name}}" type="video/mp4">
-                        Video tag is not supported by your current browser.
-                    </video>
-                    <br>
-                    <button onclick="videoHandler.seekFrame(processor.rightVideo, -1)">
-                        <</button> <button onclick="videoHandler.seekFrame(processor.rightVideo, 1)">>
-                    </button>
-                    <br>
-                    <input type="range" value="0" min="0" max="0" id="right-slider" style="width:320px;">
-                    <div class="panel-body" id="right-info">
-                        <strong>Frame: </strong><span class="time"></span><br>
-                        <strong>Frame Offset: </strong><span class="offset"></span><br>
-                        <strong>Frames: </strong><span class="frames"></span><br>
-                        <strong>Duration: </strong><span class="duration"></span><br>
-                    </div>
-                </div>
-                <div id="right-json" hidden>{{.RightVideoInfo.JSON}}</div>
+                <div id="json-config" hidden>{{.VideoInfo.JSON}}</div>
             </div>
         </div>
         {{end}}
