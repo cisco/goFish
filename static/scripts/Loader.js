@@ -1,5 +1,4 @@
-let processor    = new Processor();
-let videoHandler = new VideoSettingsHandler(processor);
+let videoHandler = new VideoHandler();
 let eventHandler = new EventHandler();
 let toolkit      = new Toolkit();
 
@@ -17,6 +16,9 @@ $(document).ajaxComplete(function(e){
     e.preventDefault();
     e.stopImmediatePropagation();
 
+    $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
+    $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
+
     $("#tools").draggable();
     $("#info-panel").draggable();
     $("#info-panel").resizable();
@@ -26,8 +28,7 @@ $(document).ajaxComplete(function(e){
         var scrubber = document.getElementById("event-time-bar");
         var rel_pos = Math.round( (bar_offset / $(this).width()) * scrubber.max );
         scrubber.value = rel_pos;
-        processor.leftVideo.currentTime = (scrubber.value + processor.leftVideo.frameOffset) / 30;
-        processor.rightVideo.currentTime = (scrubber.value + processor.rightVideo.frameOffset) / 30;
+        videoHandler.video.currentTime = scrubber.value / FRAMERATE;
         setTimeout(ReDraw, 300);
     });
 
@@ -36,13 +37,13 @@ $(document).ajaxComplete(function(e){
         {
             $(this).addClass("active");
             $(this).children(".material-icons").html("&#xe034;");
-            play();
+            Play();
         }
         else
         {
             $(this).removeClass("active");
             $(this).children(".material-icons").html("&#xe037;");
-            pause();
+            Pause();
         }
     });
 
@@ -67,20 +68,21 @@ window.onload = function()
     LoadAll();
 }
 
-function play()
+function Play()
 {
-    if(processor.ended)
+    if(videoHandler.ended)
         eventHandler.event_index = 0;
-    processor.play();
+
+    videoHandler.play();
 
     timer = setInterval(function(){
-        processor.run();
         videoHandler.run();
+
         eventHandler.run();
         for(var i = 0; i < toolkit.left_rulers.length; i++)
-            toolkit.left_rulers[i].Render(processor.canvas);
+            toolkit.left_rulers[i].Render(videoHandler.canvas);
         for(var i = 0; i < toolkit.right_rulers.length; i++)
-            toolkit.right_rulers[i].Render(processor.canvas);
+            toolkit.right_rulers[i].Render(videoHandler.canvas);
 
         $("#total-events").html(eventHandler.events.length);
         GetRulers();
@@ -88,78 +90,51 @@ function play()
     }, 1000/FRAMERATE);
 }
 
-function pause()
+function Pause()
 {
     clearInterval(timer);
-    processor.pause();
+    videoHandler.pause();
 }
 
-function sync()
+function SeekBack()
 {
-    eventHandler.event_index = 0;
-    processor.sync();
-    
-    if(playing)
-        timer = setInterval(function(){
-            processor.run();
-            videoHandler.run();
-            eventHandler.run();
-            for(var i = 0; i < toolkit.left_rulers.length; i++)
-                toolkit.left_rulers[i].Render(processor.canvas);
-            for(var i = 0; i < toolkit.right_rulers.length; i++)
-                toolkit.right_rulers[i].Render(processor.canvas);
-    
-            $("#total-events").html(eventHandler.events.length);
-            GetRulers();
-        }, 1000/FRAMERATE);
-
-}
-
-function seekBack()
-{
-    videoHandler.seekFrame(processor.leftVideo, -1);
-    videoHandler.seekFrame(processor.rightVideo, -1);
+    videoHandler.adjustVideo(-30);
     setTimeout(function(){
-        processor.draw();
+        videoHandler.draw();
         eventHandler.draw();
     }, 300);
 }
 
-function seekForward()
+function ReDraw()
 {
-    videoHandler.seekFrame(processor.leftVideo, 1);
-    videoHandler.seekFrame(processor.rightVideo, 1);
+    videoHandler.draw();
+    eventHandler.draw();
+    for(var i = 0; i < toolkit.left_rulers.length; i++)
+        toolkit.left_rulers[i].Render(videoHandler.canvas);
+    for(var i = 0; i < toolkit.right_rulers.length; i++)
+        toolkit.right_rulers[i].Render(videoHandler.canvas);
+}
+
+function SeekForward()
+{
+    videoHandler.adjustVideo(30);
     setTimeout(function(){
-        processor.draw();
+        videoHandler.draw();
         eventHandler.draw();
     }, 300);
 }
 
 function LoadAll()
 {
-    processor       = new Processor();
-    videoHandler    = new VideoSettingsHandler(processor);
+    videoHandler    = new VideoHandler();
     eventHandler    = new EventHandler();
     toolkit         = new Toolkit();
 
-    // Handle JSON for Left Video
-    if(document.getElementById("left-json") != null)
+    // Handle JSON for Video.
+    if(document.getElementById("json-config") != null)
     {
-        var json = new JsonHandler(document.getElementById("left-json").textContent, processor.leftVideo);
-        if(json.handle != null)
-            if(json.Event_QRCode() != null)
-            videoHandler.seekFrameOffset(processor.leftVideo, json.Event_QRCode().frame);
+        var json = new JsonHandler(document.getElementById("json-config").textContent, videoHandler.video);
         eventHandler.events = json.events;
-    }
-
-    // Handle JSON for Right Video.
-    if(document.getElementById("right-json") != null)
-    {
-        var json = new JsonHandler(document.getElementById("right-json").textContent, processor.rightVideo);
-        if(json.handle != null)
-            if(json.Event_QRCode() != null)
-            videoHandler.seekFrameOffset(processor.rightVideo, json.Event_QRCode().frame);
-        eventHandler.events.concat(json.events);
     }
 
     eventHandler.draw();
@@ -201,16 +176,6 @@ function HandleTools()
     $("#tools").draggable();
     $("#info-panel").draggable();
     $("#info-panel").resizable();
-}
-
-function ReDraw()
-{
-    processor.draw();
-    eventHandler.draw();
-    for(var i = 0; i < toolkit.left_rulers.length; i++)
-        toolkit.left_rulers[i].Render(processor.canvas);
-    for(var i = 0; i < toolkit.right_rulers.length; i++)
-        toolkit.right_rulers[i].Render(processor.canvas);
 }
 
 function GetRulers()

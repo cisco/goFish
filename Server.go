@@ -160,39 +160,31 @@ type VideoInfo struct {
 func HandleVideoHTML(r *http.Request) interface{} {
 	err := r.ParseMultipartForm(10 << 20)
 	if err == nil {
-		var leftVideoName, rightVideoName = GetFileName(r, "select-video-1"), GetFileName(r, "select-video-2")
+		videoName := GetFileName(r, "select-video")
 
+		// TODO: This should eb moved to another function to be handled.
 		// If we're not selecting video, then upload the videos instead.
-		if leftVideoName == "" && rightVideoName == "" {
-			log.Println(" Uploading files:")
+		if videoName == "" {
 			t := time.Now()
 			UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
 			//UploadFiles(r, "upload-videos", "videos/", FileInfo{"V_", ".mp4", 10 << 20})
 		} else {
-			log.Println(" Selecting files:")
-			log.Println(" > Left Video  : " + leftVideoName)
-			log.Println(" > Right Video : " + rightVideoName)
+			log.Println(" > Selecting video:" + videoName)
 		}
 
-		leftTag, rightTag := strings.TrimSuffix(strings.TrimPrefix(leftVideoName, "V_"), ".mp4"), strings.TrimSuffix(strings.TrimPrefix(rightVideoName, "V_"), ".mp4")
-		file, err := ioutil.ReadFile("static/video-info/DE_" + leftTag + ".json")
-		leftJSON, rightJSON := "", ""
+		tag := strings.TrimSuffix(videoName, ".mp4")
+		file, err := ioutil.ReadFile("static/video-info/DE_" + tag + ".json")
+		videoJSON := ""
 		if err == nil {
-			leftJSON = string(file)
-		}
-		file, err = ioutil.ReadFile("static/video-info/DE_" + rightTag + ".json")
-		if err == nil {
-			rightJSON = string(file)
+			videoJSON = string(file)
 		}
 
 		return struct {
-			VideosLoaded   bool
-			LeftVideoInfo  VideoInfo
-			RightVideoInfo VideoInfo
+			VideosLoaded bool
+			VideoInfo    VideoInfo
 		}{
-			(leftVideoName != "") && (rightVideoName != ""),
-			VideoInfo{leftVideoName, leftTag, leftJSON},
-			VideoInfo{rightVideoName, rightTag, rightJSON},
+			videoName != "",
+			VideoInfo{videoName, tag, videoJSON},
 		}
 	}
 	return struct{}{}
