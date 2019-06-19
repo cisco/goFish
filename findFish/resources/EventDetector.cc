@@ -3,11 +3,17 @@
 
 #include <vector>
 #include <regex>
+#include <iostream>
 
 using namespace cv;
 
+/////////////////////////////////////////////////////////////////////////////////////
+// Forward Declarations
 std::vector<std::string> SplitString(std::string& str, const char* delimiter);
 
+
+/////////////////////////////////////////////////////////////////////////////////////
+// Event Builder Base Class
 EventBuilder::EventBuilder(Mat& frame)
     : frame_{ frame }, start_frame{ -1 }, end_frame{ -1 }, json_object{JSON("")} {}
 
@@ -17,23 +23,28 @@ const JSON EventBuilder::GetAsJSON()
 }
 
 
+/////////////////////////////////////////////////////////////////////////////////////
+// QR Code Event
 QREvent::QREvent(cv::Mat& frame) : EventBuilder(frame) {}
 
 void QREvent::StartEvent(int& currFrame)
 {
-    QRCodeDetector qrDetector;
-    Mat boundBox;
-    std::string url = qrDetector.detectAndDecode(frame_, boundBox);
-
-    if (url.length() > 0 && (start_frame == -1 && end_frame == -1)) 
+    if(!frame_.empty())
     {
-        start_frame = currFrame;
+        QRCodeDetector qrDetector;
+        Mat boundBox;
+        std::string url = qrDetector.detectAndDecode(frame_, boundBox);
 
-        std::map<std::string, std::string> info = GetGeoURIValues(url);
-        info.insert(std::make_pair("frame", std::to_string(start_frame)));
-        json_object = JSON("Event_QRCode", info);
+        if (url.length() > 0 && (start_frame == -1 && end_frame == -1)) 
+        {
+            start_frame = currFrame;
 
-        EndEvent(currFrame);
+            std::map<std::string, std::string> info = GetGeoURIValues(url);
+            info.insert(std::make_pair("frame", std::to_string(start_frame)));
+            json_object = JSON("Event_QRCode", info);
+
+            EndEvent(currFrame);
+        }
     }
 }
 
@@ -71,8 +82,17 @@ std::map<std::string, std::string> QREvent::GetGeoURIValues(std::string& uri)
 }
 
 
-
-ActivityEvent::ActivityEvent(cv::Mat& frame, int id) : EventBuilder(frame), id_{id}, active_{true} {}
+/////////////////////////////////////////////////////////////////////////////////////
+// Activity Event
+ActivityEvent::ActivityEvent(int id, int& start, int& end) : EventBuilder(), id_{id}, active_{true} 
+{
+    StartEvent(start);
+    if(end > 0)
+    {
+        SetIsActive(false);
+        EndEvent(end);
+    }
+}
 
 void ActivityEvent::StartEvent(int& currFrame)
 {
@@ -101,9 +121,8 @@ bool ActivityEvent::IsActive()
     return active_;
 }
 
-////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 // Helper Functions
-////////////////////////////////////
 std::vector<std::string> SplitString(std::string& str, const char* delimiter)
 {
     std::vector<std::string> result;

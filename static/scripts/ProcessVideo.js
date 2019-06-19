@@ -281,7 +281,8 @@ class JsonHandler
 {
     constructor(tag, video)
     {
-        this.handle = tag != null ? JSON.parse(tag) : null;
+        alert(tag);
+        this.handle = tag != null || tag != "" ? JSON.parse(tag) : null;
         this.tag = tag;
         this.video = video;
         this.events = []
