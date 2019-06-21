@@ -122,7 +122,7 @@ class JsonHandler
             function Activity(e){return e["Event_Activity_"+id];}
             var event = this.handle.DetectedEvents.find(Activity) != null ? this.handle.DetectedEvents.find(Activity)["Event_Activity_"+id] : null;
             if(event != null)
-                this.events.push(new Event(((event.frame_start - this.frameOffset )/ (this.video.maxFrame - this.frameOffset)), ((event.frame_end - this.video.frameOffset ) / (this.video.maxFrame - this.video.frameOffset))));
+                this.events.push(new Event(((event.frame_start )/ (this.video.maxFrame)), ((event.frame_end) / (this.video.maxFrame))));
         }
     }
 }
@@ -175,6 +175,7 @@ class EventHandler
 
             if(this.events[this.event_index] != null)
             {
+                console.log(this.events);
                 if(this.events[this.event_index].frame_start * this.canvas.width <= slider && slider <= this.events[this.event_index].frame_end * this.canvas.width);
                 else if (slider / this.canvas.width > this.events[this.event_index].frame_end)
                     if(this.events[this.event_index+1] != null && this.event_index + 1 < this.events.length)

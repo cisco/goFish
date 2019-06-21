@@ -1,6 +1,5 @@
 #include "includes/Tracker.h"
 
-#include <opencv2/objdetect.hpp>
 #include <opencv2/imgcodecs.hpp>
 
 #include <vector>
@@ -9,25 +8,37 @@ Tracker::Tracker(Tracker::Settings s)
 {
     Config = s;
     bkgd_sub_ptr = cv::createBackgroundSubtractorKNN();
+    GetCascades();
 }
 
 void Tracker::CreateMask(cv::Mat& frame)
 {
-    bkgd_sub_ptr->apply(frame, _mask);
+    // Background subtraction method.
+    {
+        bkgd_sub_ptr->apply(frame, _mask);
 
-    cv::threshold(_mask, _mask, Config.MinThreshold, Config.MaxThreshold, cv::THRESH_BINARY);
+        int sigmaX = 10, sigmaY = 10, ksize = 9;
+        
+        cv::Mat kernel = getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(2 * sigmaX + 1, 2 * sigmaY + 1), cv::Point(sigmaX, sigmaY));
 
-    int morph_elem = 0;
-    int morph_size = 7, erode_size = 2;
-    cv::Mat kernel  = cv::getStructuringElement(morph_elem, cv::Size(2 * erode_size + 1, 2 * erode_size + 1), cv::Point(erode_size, erode_size));
-    cv::Mat element = cv::getStructuringElement(morph_elem, cv::Size(2 * morph_size + 1, 2 * morph_size + 1), cv::Point(morph_size, morph_size));
+        cv::GaussianBlur(_mask, _mask, cv::Size(ksize, ksize), sigmaX, sigmaY);
+        cv::morphologyEx(_mask, _mask, cv::MORPH_CLOSE, cv::getGaussianKernel(ksize, sigmaX));
+        
+        cv::dilate(_mask, _mask, kernel, cv::Point(sigmaX, sigmaY));
+        cv::erode(_mask, _mask, kernel, cv::Point(sigmaX, sigmaY));
 
-    cv::dilate(_mask, _mask, kernel, cv::Point(1, 1));
-    cv::morphologyEx(_mask, _mask, cv::MORPH_CLOSE, element);
-    cv::erode(_mask, _mask, kernel, cv::Point(0, 0));
+        cv::threshold(_mask, _mask, Config.MinThreshold, Config.MaxThreshold, cv::THRESH_BINARY);
 
-    cv::medianBlur(_mask, _mask, 3);
+        //cv::imshow("mask", _mask);
+    }
 
+    // Haar Cascade method.
+    for(auto cascade : cascades)
+    {
+        std::vector<cv::Rect> objects;
+        cascade.second->detectMultiScale(frame, objects);
+    }
+    
     GetObjectContours(frame);
 }
 
@@ -41,7 +52,9 @@ void Tracker::GetObjectContours(cv::Mat& frame)
 
     // Detect edges using canny
     cv::Canny(_mask, canny_output, thresh, thresh * 2, 5);
-    cv::findContours(canny_output, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS, cv::Point(0, 0));
+    cv::findContours(canny_output, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+
+    std::vector<std::vector<cv::Point2f>> prec_conts(contours.size());
 
     if(Config.bDrawContours)
     {
@@ -49,8 +62,12 @@ void Tracker::GetObjectContours(cv::Mat& frame)
         cv::Mat drawing = cv::Mat::zeros(canny_output.size(), CV_8UC3);
         for (int i = 0; i < contours.size(); i++)
         {
+            cv::approxPolyDP(contours[i], prec_conts[i], 3, true);
             cv::Scalar colour = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-            cv::drawContours(frame, contours, i, colour, 2, 8, hierarchy, 0, cv::Point());
+            cv::drawContours(frame, contours, i, colour, -1, 8, hierarchy, 0, cv::Point());
+
+            cv::Rect bound_rect = cv::boundingRect(prec_conts[i]);
+            cv::rectangle(frame, bound_rect.tl(), bound_rect.br(), colour, 2);
         }
     }
 }
@@ -67,5 +84,15 @@ void Tracker::CheckForActivity(int& CurrentFrame)
         if(ActivityRange.find(ActivityRange.size()) != ActivityRange.end())
         if (ActivityRange.find(ActivityRange.size())->first > -1)
             ActivityRange[ActivityRange.size()].second = CurrentFrame;
+    }
+}
+
+void Tracker::GetCascades()
+{
+    std::vector<std::string> names;
+    for(auto name : names)
+    {
+        // Check if <name>.yaml exists.
+        if(false/* Add file exist check here */) cascades.insert(std::make_pair(0, new cv::CascadeClassifier(name + ".yaml")));
     }
 }
