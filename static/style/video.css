@@ -127,7 +127,7 @@ button.active {
 #info-panel {
     position: absolute;
     grid-column: 11/13;
-    right: 0;
+    text-align: left;
 }
 
 #info-panel > .panel-body {
@@ -139,7 +139,27 @@ button.active {
     cursor: move;
 }
 
-#terminal-output {
-    grid-column: 3 / 11;
-    grid-row: span 2;
+#attributes-form {
+
+}
+
+#attributes-form > label{
+    display: inline-block;
+    width: 50%;
+    margin-left:-2em;
+    text-align: right;
+}
+
+#attributes-form > label::after{
+    content: ":";
+}
+
+#attributes-form > select, #attributes-form > input, #attributes-form > textarea {
+    float: right;
+    margin-right: -1em;
+    width: 70%;
+}
+
+#attributes-form > textarea {
+    resize: none;
 }

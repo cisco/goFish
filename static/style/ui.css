@@ -74,7 +74,7 @@ body {
     color: #C6C7CA;
 }
 
-.dropdown {
+.dropdown{
     display: inline-block;
     text-align: left;
     vertical-align: middle;
@@ -85,9 +85,17 @@ body {
     max-width: 2%;
     transition: 0.5s ease-in-out;
 }
+
 .nav-item {
+    vertical-align: top;
     overflow: hidden;
     white-space: nowrap;
+}
+
+.nav-item > a {
+    text-decoration: none;
+    color: inherit;
+    font-size: inherit;
 }
 
 .dropdown-content {

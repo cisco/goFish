@@ -21,7 +21,7 @@ $(document).ajaxComplete(function(e){
 
     $("#tools").draggable();
     $("#info-panel").draggable();
-    $("#info-panel").resizable();
+    //$("#info-panel").resizable();
 
     $("#event-time-bar").on("click", function(e){
         var bar_offset = e.clientX - $(this).position().left;
@@ -175,7 +175,7 @@ function HandleTools()
 
     $("#tools").draggable();
     $("#info-panel").draggable();
-    $("#info-panel").resizable();
+    //$("#info-panel").resizable();
 }
 
 function GetRulers()

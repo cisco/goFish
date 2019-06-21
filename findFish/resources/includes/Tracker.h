@@ -1,6 +1,7 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/objdetect.hpp>
 #include <map>
 
 class Tracker
@@ -8,6 +9,7 @@ class Tracker
 public:
     struct Settings
     {
+        // Contour Settings
         bool bDrawContours = false;
         
         // Threshold Settings
@@ -21,6 +23,7 @@ public:
     void CreateMask(cv::Mat&);
     void GetObjectContours(cv::Mat&);
     void CheckForActivity(int&);
+    void GetCascades();
 
 public:
     Settings Config;
@@ -29,5 +32,6 @@ public:
 private:
     cv::Mat _mask;
     cv::Ptr<cv::BackgroundSubtractor> bkgd_sub_ptr;
+    std::map<int, cv::Ptr<cv::CascadeClassifier>> cascades;
     std::vector<std::vector<cv::Point>> contours;
 };

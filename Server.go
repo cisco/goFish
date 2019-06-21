@@ -17,6 +17,7 @@ import (
 // Server : Server object to handle HTTP requests.
 type Server struct {
 	MUX *http.ServeMux
+	DB  *Database
 }
 
 // NewServer : Constructs a new Server type.
@@ -39,19 +40,19 @@ func NewServer(args ...func(*Server)) *Server {
 }
 
 // ServerHTTP : Wrapper for the Server MUX ServeHTTP method.
-func (outVector *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	outVector.MUX.ServeHTTP(w, r)
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.MUX.ServeHTTP(w, r)
 }
 
 // HandleHTTP : Wrapper for Server MUX Handle method.
-func (outVector *Server) HandleHTTP(dir string, fn func(w http.ResponseWriter, r *http.Request)) {
-	outVector.MUX.HandleFunc(dir, fn)
+func (s *Server) HandleHTTP(dir string, fn func(w http.ResponseWriter, r *http.Request)) {
+	s.MUX.HandleFunc(dir, fn)
 }
 
 // BuildHTMLTemplate : Creates the HTML required based on submitted files.
-func (outVector *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Request) interface{}) {
+func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Request) interface{}) {
 	var tmpl = template.Must(template.ParseFiles(file))
-	outVector.MUX.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
+	s.MUX.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			tmpl.Execute(w, nil)
 			return
@@ -162,12 +163,8 @@ func HandleVideoHTML(r *http.Request) interface{} {
 	if err == nil {
 		videoName := GetFileName(r, "select-video")
 
-		// TODO: This should eb moved to another function to be handled.
-		// If we're not selecting video, then upload the videos instead.
 		if videoName == "" {
-			t := time.Now()
-			UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
-			//UploadFiles(r, "upload-videos", "videos/", FileInfo{"V_", ".mp4", 10 << 20})
+			return nil
 		} else {
 			log.Println(" > Selecting video:" + videoName)
 		}
@@ -187,6 +184,12 @@ func HandleVideoHTML(r *http.Request) interface{} {
 			VideoInfo{videoName, tag, videoJSON},
 		}
 	}
+	return nil
+}
+
+func HandleUpload(r *http.Request) interface{} {
+	t := time.Now()
+	UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
 	return struct{}{}
 }
 
@@ -243,4 +246,47 @@ func HandleRulerHTML(r *http.Request) interface{} {
 
 	}
 	return struct{}{}
+}
+
+// ServeInfo : Provides info from the database to the info panel.
+func (s *Server) ServeInfo(r *http.Request) interface{} {
+	result, err := s.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
+	if err != nil {
+		log.Println(err)
+	}
+	defer result.Close()
+
+	type IdName struct {
+		Id   int
+		Name string
+	}
+
+	family := make([]IdName, 0)
+	genera := make([]IdName, 0)
+	species := make([]IdName, 0)
+	for result.Next() {
+
+		var f, g, s string
+		var fid, gid, sid int
+		err = result.Scan(&f, &fid, &g, &gid, &s, &sid)
+		if err != nil {
+			panic(err)
+		}
+		family = append(family, IdName{fid, f})
+		genera = append(genera, IdName{gid, g})
+		species = append(species, IdName{sid, s})
+	}
+
+	log.Println(family, genera, species)
+	return struct {
+		PageInfo interface{}
+		Family   []IdName
+		Genera   []IdName
+		Species  []IdName
+	}{
+		HandleVideoHTML(r),
+		family,
+		genera,
+		species,
+	}
 }

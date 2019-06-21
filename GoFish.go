@@ -13,10 +13,14 @@ import (
 )
 
 func main() {
-	os.Setenv("PORT", "80")
+	args := os.Args[1:]
+	if len(args) > 0 {
+		os.Setenv("PORT", string(args[len(args)-1]))
+	} else {
+		os.Setenv("PORT", "80")
+	}
 	os.Setenv("DB_PORT", "3306")
 	//go RunProcess("./FishFinder")
-	CreateDatabase()
 	StartServer()
 }
 
@@ -34,7 +38,9 @@ func StartServer() {
 
 	// Create the new server.
 	server := NewServer()
-	server.BuildHTMLTemplate("static/videos.html", "/", HandleVideoHTML)
+	server.DB = CreateDatabase()
+	server.BuildHTMLTemplate("static/videos.html", "/", server.ServeInfo)
+	server.BuildHTMLTemplate("static/videos.html", "/upload/", HandleUpload)
 	server.BuildHTMLTemplate("static/videos.html", "/processing/", HandleRulerHTML)
 
 	handler := &http.Server{Addr: addr, Handler: server}
@@ -82,11 +88,13 @@ func RunProcess(instr string) {
 	}
 }
 
-func CreateDatabase() {
+// CreateDatabase : Handles the creation of and/or connection to a database.
+func CreateDatabase() *Database {
 	addr := os.Getenv("DB_PORT")
 	port, _ := strconv.Atoi(addr)
 	db := NewDatabase(port)
 
 	db.ConnectDB("127.0.0.1:" + addr)
 	db.CreateDB("fishTest")
+	return db
 }

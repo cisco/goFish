@@ -38,3 +38,4 @@ static/video-info/
 .vscode/
 *.yaml
 static/proc_videos/
+database/
