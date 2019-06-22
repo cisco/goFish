@@ -188,8 +188,11 @@ func HandleVideoHTML(r *http.Request) interface{} {
 }
 
 func HandleUpload(r *http.Request) interface{} {
-	t := time.Now()
-	UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
+	err := r.ParseMultipartForm(10 << 20)
+	if err == nil {
+		t := time.Now()
+		UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
+	}
 	return struct{}{}
 }
 
