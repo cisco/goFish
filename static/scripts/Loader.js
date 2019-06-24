@@ -20,8 +20,6 @@ $(document).ajaxComplete(function(e){
     e.preventDefault();
     e.stopImmediatePropagation();
 
-    alert("");
-
     $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
     $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
 
@@ -71,10 +69,6 @@ $(document).ajaxComplete(function(e){
 
 window.onload = function()
 {
-    SubmitMultipartForms("#select-video, #upload-video");
-    HandleTools();
-    $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
-    $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
     LoadAll();
 }
 
