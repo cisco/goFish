@@ -32,14 +32,21 @@
         <div class="nav-header">Fish Finder</div>
         <div class="dropdown">
             <div class="nav-item"><i class="material-icons">&#xe63a;</i>&emsp;Select Video</div>
-            <div class="dropdown-content">
-                <form method="post" enctype="multipart/form-data" id="select-video">
-                    <!--input type="file" name="select-video-1"  /><br-->
-                    <!--input type="file" name="select-video-2"  /><br-->
+            <div class="dropdown-content files">
+                <!--form method="post" enctype="multipart/form-data" id="select-video">
+                    <input type="file" name="select-video-1"  /><br>
+                    <input type="file" name="select-video-2"  /><br>
                     <input type="file" name="select-video"    /><br>
                     <input type="submit" value="Select Video" />
-                </form>
-            </div>
+                </form-->
+                {{if .Files}}
+                    {{range $i , $f := .Files}}
+                        <div class="file-item">{{ $f }}</div>
+                    {{end}}
+                {{else}}
+                    <div class="no-file">No Files to select. Please upload some!</div>
+                {{end}}
+                </div>
         </div>
         <div class="dropdown">
             <div class="nav-item"><i class="material-icons">&#xe2c6;</i>&emsp;Upload Videos</div>
@@ -51,7 +58,7 @@
             </div>
         </div>
         <div class="dropdown">
-        <div class="nav-item"><a href="https://github.com/cisco/goFish.git" target="_blank"><i class='fab fa-github' style="font-size: 28px;"></i>&emsp;Github</a></div>
+        <div class="nav-item"><a href="https://github.com/cisco/goFish.git" target="_blank"><i class='fab fa-github' style="font-size: 26px;"></i>&emsp;Github</a></div>
         </div>
     </div>
     <div class="container">
@@ -73,28 +80,23 @@
         <div id="info-panel" class="panel">
             <div class="panel-header">Info</div>
             <div class="panel-body">
-                <!--div>Total Events: <span id="total-events"></span></div-->
-                <!--dl>
-                    <dt>Rulers:</dt>
-                    <dd id="ruler-info"></dd>
-                </dl-->
                 <form method="post" name="attributes-form" id="attributes-form">
                     <label for="family">Family</label>
                     <select name="family" id="family">
-                    {{range .Family}}
+                    {{range .DBInfo.Family}}
                         <option value="{{.Id}}">{{.Name}}</option>
                     {{end}}
                     </select>
                     <br>
                     <label for="genus">Genus</label>
                     <select name="genus" id="genus">
-                    {{range .Genera}}
+                    {{range .DBInfo.Genera}}
                         <option value="{{.Id}}">{{.Name}}</option>
                     {{end}}
                     </select><br>
                     <label for="species">Species</label>
                     <select name="species" id="species">
-                    {{range .Species}}
+                    {{range .DBInfo.Species}}
                         <option value="{{.Id}}">{{.Name}}</option>
                     {{end}}
                     </select><br>
