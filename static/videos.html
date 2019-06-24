@@ -77,6 +77,19 @@
             </div>
         </div>
         {{if .PageInfo.VideosLoaded}}
+        <div id="videos" class=panel hidden>
+            <div class="panel-header">Videos</div>
+            <div class="panel-body" style="display: flex;">
+                <div id="selected-video">
+                    <video width="320" height="240" controls class="video" id="selected">
+                        <source src="/static/proc_videos/{{.PageInfo.VideoInfo.Name}}" type="video/mp4">
+                        Video tag is not supported by your current browser.
+                    </video>
+                </div>
+                <div id="json-config" hidden>{{.PageInfo.VideoInfo.JSON}}</div>
+            </div>
+        </div>
+        {{if .DBInfo}}
         <div id="info-panel" class="panel">
             <div class="panel-header">Info</div>
             <div class="panel-body">
@@ -119,6 +132,7 @@
                 </code>
             </div>
         </div>
+        {{end}}
         <div id="tools" class="panel">
             <div class="panel-header"><button class="window-btn" id="toolbar-shape"><i class="material-icons">&#xe5cf;</i></button></div>
             <div class="panel-body">
@@ -126,18 +140,6 @@
                     <button id="ruler" onclick="toolkit.SetMode(0, this)"><i class="material-icons">&#xe150;</i></button>
                     <button id="clear-ruler" onclick="toolkit.SetMode(1, this)" hidden><i class="material-icons">&#xe888;</i></button>
                 </div>
-            </div>
-        </div>
-        <div id="videos" class=panel hidden>
-            <div class="panel-header">Videos</div>
-            <div class="panel-body" style="display: flex;">
-                <div id="selected-video">
-                    <video width="320" height="240" controls class="video" id="selected">
-                        <source src="/static/proc_videos/{{.PageInfo.VideoInfo.Name}}" type="video/mp4">
-                        Video tag is not supported by your current browser.
-                    </video>
-                </div>
-                <div id="json-config" hidden>{{.PageInfo.VideoInfo.JSON}}</div>
             </div>
         </div>
         {{end}}
