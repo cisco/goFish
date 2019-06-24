@@ -15,12 +15,12 @@ import (
 func main() {
 	args := os.Args[1:]
 	if len(args) > 0 {
-		os.Setenv("PORT", string(args[len(args)-1]))
+		os.Setenv("PORT", string(args[0]))
 	} else {
 		os.Setenv("PORT", "80")
 	}
-	os.Setenv("DB_PORT", "3306")
 	os.Setenv("URL", "127.0.0.1:")
+	os.Setenv("DB_PORT", "3306")
 	//go RunProcess("./FishFinder")
 	StartServer()
 }
