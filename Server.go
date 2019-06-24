@@ -267,6 +267,7 @@ func GetDBInfo(s *Server, r *http.Request) interface{} {
 	result, err := s.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
 	if err != nil {
 		log.Println(err)
+		return struct{}{}
 	}
 	defer result.Close()
 
