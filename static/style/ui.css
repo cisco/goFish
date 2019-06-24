@@ -115,7 +115,7 @@ body {
 }
 
 .dropdown > div {
-    overflow: hidden !important;
+    overflow: hidden;
 }
 
 .dropdown:hover {
@@ -138,4 +138,20 @@ dd {
     border-left: 1px solid #000000;
     margin-left: 0.5em;
     padding-left: 0.5em;
+}
+
+.dropdown-content.files {
+    overflow-y: scroll !important;
+}
+
+.file-item, .no-file {
+    padding: 10px;
+    font-size: 0.75em;
+    background: #FFFFFF;
+    width: 100%;
+}
+
+.file-item:hover {
+    background: #9E9EA2 ;
+    color: #FFFFFF;
 }

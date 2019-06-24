@@ -53,10 +53,10 @@ func (s *Server) HandleHTTP(dir string, fn func(w http.ResponseWriter, r *http.R
 func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Request) interface{}) {
 	var tmpl = template.Must(template.ParseFiles(file))
 	s.MUX.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
+		/*if r.Method != http.MethodPost {
 			tmpl.Execute(w, nil)
 			return
-		}
+		}*/
 
 		// Get the function which defines what we do to the page.
 		retval := fn(r)
@@ -64,6 +64,31 @@ func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Reques
 		// Execute our crafted HTML response and submit values to the page.
 		tmpl.Execute(w, retval)
 	})
+}
+
+// ServeInfo : Provides info from the database to the info panel.
+func (s *Server) ServeInfo(r *http.Request) interface{} {
+
+	var fileNames []string
+	files, err := ioutil.ReadDir("./static/proc_videos/")
+
+	if err == nil {
+		for _, file := range files {
+			if file.Name() != ".DS_Store" {
+				fileNames = append(fileNames, file.Name())
+			}
+		}
+	}
+
+	return struct {
+		PageInfo interface{}
+		DBInfo   interface{}
+		Files    []string
+	}{
+		HandleVideoHTML(r),
+		GetDBInfo(s, r),
+		fileNames,
+	}
 }
 
 // FileInfo : Structure to contain information about the precise formatting of files being added to the server.
@@ -132,23 +157,6 @@ func GetFileName(r *http.Request, formField string) string {
 	return ""
 }
 
-// BuildHTMLTemplate : Creates the HTML required based on submitted files.
-func BuildHTMLTemplate(file string, fn func(*http.Request) interface{}, dir string) {
-	var tmpl = template.Must(template.ParseFiles(file))
-	http.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			tmpl.Execute(w, nil)
-			return
-		}
-
-		// Get the function which defines what we do to the page.
-		retval := fn(r)
-
-		// Execute our crafted HTML response and submit values to the page.
-		tmpl.Execute(w, retval)
-	})
-}
-
 // VideoInfo : Structure that holds information about a video, which is passed to HTML.
 type VideoInfo struct {
 	Name string
@@ -159,15 +167,19 @@ type VideoInfo struct {
 // HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload
 // the files.
 func HandleVideoHTML(r *http.Request) interface{} {
-	err := r.ParseMultipartForm(10 << 20)
-	if err == nil {
-		videoName := GetFileName(r, "select-video")
+	//err := r.ParseMultipartForm(10 << 20)
+	if r.Method == "POST" {
+		decoder := json.NewDecoder(r.Body)
+		var d interface{}
+		decoder.Decode(&d)
+
+		//videoName := GetFileName(r, "select-video")
+		videoName := d.(map[string]interface{})["file"].(string)
 
 		if videoName == "" {
-			return nil
-		} else {
-			log.Println(" > Selecting video:" + videoName)
+			return struct{ VideosLoaded bool }{false}
 		}
+		log.Println(" > Selecting video:" + videoName)
 
 		tag := strings.TrimSuffix(videoName, ".mp4")
 		file, err := ioutil.ReadFile("static/video-info/DE_" + tag + ".json")
@@ -184,7 +196,7 @@ func HandleVideoHTML(r *http.Request) interface{} {
 			VideoInfo{videoName, tag, videoJSON},
 		}
 	}
-	return nil
+	return struct{ VideosLoaded bool }{false}
 }
 
 func HandleUpload(r *http.Request) interface{} {
@@ -251,8 +263,7 @@ func HandleRulerHTML(r *http.Request) interface{} {
 	return struct{}{}
 }
 
-// ServeInfo : Provides info from the database to the info panel.
-func (s *Server) ServeInfo(r *http.Request) interface{} {
+func GetDBInfo(s *Server, r *http.Request) interface{} {
 	result, err := s.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
 	if err != nil {
 		log.Println(err)
@@ -280,14 +291,22 @@ func (s *Server) ServeInfo(r *http.Request) interface{} {
 		species = append(species, IdName{sid, s})
 	}
 
-	log.Println(family, genera, species)
+	var fileNames []string
+	files, err := ioutil.ReadDir("./static/proc_videos/")
+
+	if err == nil {
+		for _, file := range files {
+			if file.Name() != ".DS_Store" {
+				fileNames = append(fileNames, file.Name())
+			}
+		}
+	}
+
 	return struct {
-		PageInfo interface{}
-		Family   []IdName
-		Genera   []IdName
-		Species  []IdName
+		Family  []IdName
+		Genera  []IdName
+		Species []IdName
 	}{
-		HandleVideoHTML(r),
 		family,
 		genera,
 		species,

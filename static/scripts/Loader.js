@@ -10,11 +10,17 @@ $(function(){
     HandleTools();
     $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
     $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
+
+    $(".file-item").on("click", function(e){
+        $.post("/", JSON.stringify({file : $(this).html()}), function(response){ $(".container").html($('<div />').append(response).find(".container").html());});
+    });
 });
 
 $(document).ajaxComplete(function(e){
     e.preventDefault();
     e.stopImmediatePropagation();
+
+    alert("");
 
     $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
     $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
@@ -65,44 +71,57 @@ $(document).ajaxComplete(function(e){
 
 window.onload = function()
 {
+    SubmitMultipartForms("#select-video, #upload-video");
+    HandleTools();
+    $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
+    $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
     LoadAll();
 }
 
 function Play()
 {
-    if(videoHandler.ended)
-        eventHandler.event_index = 0;
+    if(videoHandler.video != null)
+    {
+        if(videoHandler.ended)
+            eventHandler.event_index = 0;
 
-    videoHandler.play();
+        videoHandler.play();
 
-    timer = setInterval(function(){
-        videoHandler.run();
+        timer = setInterval(function(){
+            videoHandler.run();
 
-        eventHandler.run();
-        for(var i = 0; i < toolkit.left_rulers.length; i++)
-            toolkit.left_rulers[i].Render(videoHandler.canvas);
-        for(var i = 0; i < toolkit.right_rulers.length; i++)
-            toolkit.right_rulers[i].Render(videoHandler.canvas);
+            eventHandler.run();
+            for(var i = 0; i < toolkit.left_rulers.length; i++)
+                toolkit.left_rulers[i].Render(videoHandler.canvas);
+            for(var i = 0; i < toolkit.right_rulers.length; i++)
+                toolkit.right_rulers[i].Render(videoHandler.canvas);
 
-        $("#total-events").html(eventHandler.events.length);
-        GetRulers();
+            $("#total-events").html(eventHandler.events.length);
+            GetRulers();
 
-    }, 1000/FRAMERATE);
+        }, 1000/FRAMERATE);
+    }
 }
 
 function Pause()
 {
-    clearInterval(timer);
-    videoHandler.pause();
+    if(videoHandler.video != null)
+    {
+        clearInterval(timer);
+        videoHandler.pause();
+    }
 }
 
 function SeekBack()
 {
-    videoHandler.adjustVideo(-30);
-    setTimeout(function(){
-        videoHandler.draw();
-        eventHandler.draw();
-    }, 300);
+    if(videoHandler.video != null)
+    {
+        videoHandler.adjustVideo(-30);
+        setTimeout(function(){
+            videoHandler.draw();
+            eventHandler.draw();
+        }, 300);
+    }
 }
 
 function ReDraw()
@@ -117,11 +136,14 @@ function ReDraw()
 
 function SeekForward()
 {
-    videoHandler.adjustVideo(30);
-    setTimeout(function(){
-        videoHandler.draw();
-        eventHandler.draw();
-    }, 300);
+    if(videoHandler.video != null)
+    {
+        videoHandler.adjustVideo(30);
+        setTimeout(function(){
+            videoHandler.draw();
+            eventHandler.draw();
+        }, 300);
+    }
 }
 
 function LoadAll()

@@ -20,6 +20,7 @@ func main() {
 		os.Setenv("PORT", "80")
 	}
 	os.Setenv("DB_PORT", "3306")
+	os.Setenv("URL", "127.0.0.1:")
 	//go RunProcess("./FishFinder")
 	StartServer()
 }
@@ -94,7 +95,7 @@ func CreateDatabase() *Database {
 	port, _ := strconv.Atoi(addr)
 	db := NewDatabase(port)
 
-	db.ConnectDB("127.0.0.1:" + addr)
+	db.ConnectDB(os.Getenv("URL") + addr)
 	db.CreateDB("fishTest")
 	return db
 }
