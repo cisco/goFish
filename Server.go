@@ -199,6 +199,7 @@ func HandleVideoHTML(r *http.Request) interface{} {
 	return struct{ VideosLoaded bool }{false}
 }
 
+// HandleUpload : Handles uploading files.
 func HandleUpload(r *http.Request) interface{} {
 	err := r.ParseMultipartForm(10 << 20)
 	if err == nil {
@@ -263,6 +264,7 @@ func HandleRulerHTML(r *http.Request) interface{} {
 	return struct{}{}
 }
 
+// GetDBInfo : Gets all the info required to fill out the info form for identifying animals.
 func GetDBInfo(s *Server, r *http.Request) interface{} {
 	result, err := s.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
 	if err != nil {
@@ -271,14 +273,15 @@ func GetDBInfo(s *Server, r *http.Request) interface{} {
 	}
 	defer result.Close()
 
-	type IdName struct {
+	// IDName : Struct with a combo of ID and Name.
+	type IDName struct {
 		Id   int
 		Name string
 	}
 
-	family := make([]IdName, 0)
-	genera := make([]IdName, 0)
-	species := make([]IdName, 0)
+	family := make([]IDName, 0)
+	genera := make([]IDName, 0)
+	species := make([]IDName, 0)
 	for result.Next() {
 
 		var f, g, s string
@@ -287,9 +290,9 @@ func GetDBInfo(s *Server, r *http.Request) interface{} {
 		if err != nil {
 			panic(err)
 		}
-		family = append(family, IdName{fid, f})
-		genera = append(genera, IdName{gid, g})
-		species = append(species, IdName{sid, s})
+		family = append(family, IDName{fid, f})
+		genera = append(genera, IDName{gid, g})
+		species = append(species, IDName{sid, s})
 	}
 
 	var fileNames []string
@@ -304,9 +307,9 @@ func GetDBInfo(s *Server, r *http.Request) interface{} {
 	}
 
 	return struct {
-		Family  []IdName
-		Genera  []IdName
-		Species []IdName
+		Family  []IDName
+		Genera  []IDName
+		Species []IDName
 	}{
 		family,
 		genera,
