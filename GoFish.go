@@ -44,11 +44,6 @@ func StartServer() {
 	server.BuildHTMLTemplate("static/videos.html", "/upload/", HandleUpload)
 	server.BuildHTMLTemplate("static/videos.html", "/processing/", HandleRulerHTML)
 
-	boxAPI := NewBoxAPI("database/211850911_ojaojsfr_config.json")
-	//boxAPI.UploadFile("./GoFish.go", "Test8000.go", 0)
-	boxAPI.CreateFolder("FindingFish", 0)
-	boxAPI.GetFolderItems(80460701043, 10, 0)
-
 	handler := &http.Server{Addr: addr, Handler: server}
 
 	go func() {

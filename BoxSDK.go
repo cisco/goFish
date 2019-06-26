@@ -18,6 +18,12 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
+// BoxSDK : Reads in JWT and authenticates.
+type BoxSDK struct {
+	configFile  string
+	accessToken string
+}
+
 // BoxJWTRequest : Basic structure for a Box API JWT.
 type BoxJWTRequest struct {
 	BoxAppSettings struct {
@@ -32,32 +38,25 @@ type BoxJWTRequest struct {
 	EnterpriseID string `json:"enterpriseID"`
 }
 
-// BoxAPI : Reads in JWT and authenticates.
-type BoxAPI struct {
-	configFile  string
-	accessToken string
-}
-
 // TODO: Fill these out. See "https://developer.box.com/reference" for reference on these.
-
 type FileObject struct {
 }
 
 type FolderObject struct {
 }
 
-// NewBoxAPI : Creates a new server authenticator.
-func NewBoxAPI(file string) *BoxAPI {
-	box := &BoxAPI{file, ""}
+// NewBoxSDK : Creates a new server authenticator.
+func NewBoxSDK(file string) *BoxSDK {
+	box := &BoxSDK{file, ""}
 	os.Setenv("authURL", "https://api.box.com/oauth2/token")
 	return box
 }
 
 // BoxHTTPRequest : Runs an HTTP request via a defined method.
-func (box *BoxAPI) BoxHTTPRequest(method string, url string, data io.Reader, headers map[string]string) (interface{}, error) {
+func (box *BoxSDK) BoxHTTPRequest(method string, url string, payload io.Reader, headers map[string]string) (interface{}, error) {
 	client := &http.Client{}
 
-	req, err := http.NewRequest(method, url, data)
+	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -91,7 +90,7 @@ func (box *BoxAPI) BoxHTTPRequest(method string, url string, data io.Reader, hea
 }
 
 // RequestAccessToken : Get valid ACCESS_TOKEN using JWT.
-func (box *BoxAPI) RequestAccessToken() {
+func (box *BoxSDK) RequestAccessToken() {
 	name, err := ioutil.ReadFile(box.configFile)
 	var boxConfig BoxJWTRequest
 
@@ -101,6 +100,7 @@ func (box *BoxAPI) RequestAccessToken() {
 		log.Printf("Error: %s\n", err)
 	}
 
+	// Create a unique 32 character long string.
 	var jti string
 	rBytes := make([]byte, 32)
 	_, err = rand.Read(rBytes)
@@ -108,9 +108,11 @@ func (box *BoxAPI) RequestAccessToken() {
 		jti = base64.URLEncoding.EncodeToString(rBytes)
 	}
 
+	// Build the header. This includes the PublicKey as the ID.
 	token := jwt.New(jwt.SigningMethodRS512)
 	token.Header["keyid"] = boxConfig.BoxAppSettings.AppAuth.PublicKeyID
 
+	// Construct claims.
 	claims := token.Claims.(jwt.MapClaims)
 	claims["iss"] = boxConfig.BoxAppSettings.ClientID
 	claims["sub"] = boxConfig.EnterpriseID
@@ -118,8 +120,8 @@ func (box *BoxAPI) RequestAccessToken() {
 	claims["aud"] = os.Getenv("authURL")
 	claims["jti"] = jti
 	claims["exp"] = time.Now().Add(time.Second * 10).Unix()
-	//claims["kid"] = boxConfig.BoxAppSettings.AppAuth.PublicKeyID
 
+	// Decrypt the PrivateKey using its passphrase.
 	signedKey, err := jwt.ParseRSAPrivateKeyFromPEMWithPassword(
 		[]byte(boxConfig.BoxAppSettings.AppAuth.PrivateKey),
 		boxConfig.BoxAppSettings.AppAuth.Passphrase,
@@ -129,19 +131,22 @@ func (box *BoxAPI) RequestAccessToken() {
 		log.Println(err)
 	}
 
+	// Build the assertion from the signedKey and claims.
 	assertion, err := token.SignedString(signedKey)
 
 	if err != nil {
 		log.Println(err)
 	}
 
-	data := url.Values{}
-	data.Add("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer")
-	data.Add("assertion", assertion)
-	data.Add("client_id", boxConfig.BoxAppSettings.ClientID)
-	data.Add("client_secret", boxConfig.BoxAppSettings.ClientSecret)
+	// Build the access token request.
+	payload := url.Values{}
+	payload.Add("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer")
+	payload.Add("assertion", assertion)
+	payload.Add("client_id", boxConfig.BoxAppSettings.ClientID)
+	payload.Add("client_secret", boxConfig.BoxAppSettings.ClientSecret)
 
-	response, err := box.BoxHTTPRequest("POST", os.Getenv("authURL"), bytes.NewBufferString(data.Encode()), nil)
+	// Post the request to the Box API.
+	response, err := box.BoxHTTPRequest("POST", os.Getenv("authURL"), bytes.NewBufferString(payload.Encode()), nil)
 	if err != nil {
 		log.Println(err)
 		return
@@ -150,8 +155,12 @@ func (box *BoxAPI) RequestAccessToken() {
 
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// File Functions
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // UploadFile : Creates an Access Token to the Box API, then uploads a given name to the specified folder.
-func (box *BoxAPI) UploadFile(name string, newName string, folderID int) {
+func (box *BoxSDK) UploadFile(name string, newName string, folderID int) {
 	box.RequestAccessToken()
 
 	if newName == "" {
@@ -159,30 +168,21 @@ func (box *BoxAPI) UploadFile(name string, newName string, folderID int) {
 	}
 
 	url := "https://upload.box.com/api/2.0/files/content?attributes={%22name%22:%22" + newName + "%22,%20%22parent%22:{%22id%22:%22" + strconv.Itoa(folderID) + "%22}}"
+	payload := strings.NewReader("------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-payload; name=\"file\"; filename=\"" + name + "\"\r\nContent-Type: false\r\n\r\n\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--")
+	headers := make(map[string]string)
+	headers["content-type"] = "multipart/form-payload; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW"
 
-	payload := strings.NewReader("------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"file\"; filename=\"" + name + "\"\r\nContent-Type: false\r\n\r\n\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--")
-	req, err := http.NewRequest("POST", url, payload)
+	response, err := box.BoxHTTPRequest("POST", url, payload, headers)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	req.Header.Add("content-type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW")
-	req.Header.Add("Authorization", "Bearer "+box.accessToken)
-	req.Header.Add("Content-Type", "multipart/mixed; boundary=asdfghjk")
-
-	res, err := http.DefaultClient.Do(req)
-
-	if err != nil {
-		log.Println(err)
-	}
-	defer res.Body.Close()
-
-	log.Println(res)
+	log.Println(response)
 }
 
+// TODO: Figure out a return value for this.
 // GetFileInfo : Returns information about the file with 'ID' fileID.
-func (box *BoxAPI) GetFileInfo(fileID int) {
+func (box *BoxSDK) GetFileInfo(fileID int) {
 	box.RequestAccessToken()
 	response, err := box.BoxHTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID), nil, nil)
 	if err != nil {
@@ -193,8 +193,9 @@ func (box *BoxAPI) GetFileInfo(fileID int) {
 	log.Println(response)
 }
 
+// TODO: The Box API has a strange way of handling downloads, so need to figure out a work around.
 // DownloadFile : Downloads a file with 'ID' fileID.
-func (box *BoxAPI) DownloadFile(fileID int) {
+func (box *BoxSDK) DownloadFile(fileID int) {
 	box.RequestAccessToken()
 	response, err := box.BoxHTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID)+"/content", nil, nil)
 	if err != nil {
@@ -205,7 +206,7 @@ func (box *BoxAPI) DownloadFile(fileID int) {
 }
 
 // DeleteFile : Deletes a file in a specific folder with 'ID" fileID.
-func (box *BoxAPI) DeleteFile(fileID int, etag string) {
+func (box *BoxSDK) DeleteFile(fileID int, etag string) {
 	box.RequestAccessToken()
 	headers := make(map[string]string)
 	headers["If-Match"] = etag
@@ -216,8 +217,12 @@ func (box *BoxAPI) DeleteFile(fileID int, etag string) {
 	}
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Folder Functions
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // CreateFolder : Creates a new folder under the parent folder that has 'ID' parentFolderID.
-func (box *BoxAPI) CreateFolder(name string, parentFolderID int) {
+func (box *BoxSDK) CreateFolder(name string, parentFolderID int) {
 	box.RequestAccessToken()
 	body := strings.NewReader(`{"name":"` + name + `", "parent": {"id": "` + strconv.Itoa(parentFolderID) + `"}}`)
 
@@ -232,7 +237,7 @@ func (box *BoxAPI) CreateFolder(name string, parentFolderID int) {
 
 // TODO: Figure out a return value for this.
 // GetFolderItems : Returns all the items contained inside the folder with 'ID' folderID.
-func (box *BoxAPI) GetFolderItems(folderID int, limit int, offset int) {
+func (box *BoxSDK) GetFolderItems(folderID int, limit int, offset int) {
 	box.RequestAccessToken()
 
 	response, err := box.BoxHTTPRequest("GET", "https://api.box.com/2.0/folders/"+strconv.Itoa(folderID)+"/items?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset), nil, nil)
@@ -246,5 +251,15 @@ func (box *BoxAPI) GetFolderItems(folderID int, limit int, offset int) {
 		for i, v := range response.(map[string]interface{}) {
 			log.Println(i, v)
 		}
+	}
+}
+
+// DeleteFolder : Deletes the folder with 'ID' folderID.
+func (box *BoxSDK) DeleteFolder(folderID int) {
+	box.RequestAccessToken()
+	_, err := box.BoxHTTPRequest("DELETE", "https://api.box.com/2.0/folders/"+strconv.Itoa(folderID)+"?recursive=true", nil, nil)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }
