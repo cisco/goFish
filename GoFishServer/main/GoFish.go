@@ -10,6 +10,9 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	boxsdk "github.com/cisco/goFish/BoxSDK"
+	server "github.com/cisco/goFish/Server"
 )
 
 func main() {
@@ -38,18 +41,18 @@ func StartServer() {
 	}
 
 	// Create the new server.
-	server := NewServer()
-	server.DB = CreateDatabase()
-	server.BuildHTMLTemplate("static/videos.html", "/", server.ServeInfo)
-	server.BuildHTMLTemplate("static/videos.html", "/upload/", HandleUpload)
-	server.BuildHTMLTemplate("static/videos.html", "/processing/", HandleRulerHTML)
+	ser := server.NewServer()
+	ser.DB = CreateDatabase()
+	ser.BuildHTMLTemplate("static/videos.html", "/", ser.ServeInfo)
+	ser.BuildHTMLTemplate("static/videos.html", "/upload/", server.HandleUpload)
+	ser.BuildHTMLTemplate("static/videos.html", "/processing/", server.HandleRulerHTML)
 
-	boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
+	boxSDK := boxsdk.NewBoxSDK("database/211850911_ojaojsfr_config.json")
 	//boxSDK.UploadFile("./GoFish.go", "Test8000.go", 0)
 	boxSDK.DownloadFile(482462232448)
 	//boxSDK.GetFolderItems(0, 10, 0)
 
-	handler := &http.Server{Addr: addr, Handler: server}
+	handler := &http.Server{Addr: addr, Handler: ser}
 
 	go func() {
 		if err := handler.ListenAndServe(); err != nil {
@@ -95,10 +98,10 @@ func RunProcess(instr string) {
 }
 
 // CreateDatabase : Handles the creation of and/or connection to a database.
-func CreateDatabase() *Database {
+func CreateDatabase() *server.Database {
 	addr := os.Getenv("DB_PORT")
 	port, _ := strconv.Atoi(addr)
-	db := NewDatabase(port)
+	db := server.NewDatabase(port)
 
 	db.ConnectDB(os.Getenv("URL") + addr)
 	db.CreateDB("fishTest")
