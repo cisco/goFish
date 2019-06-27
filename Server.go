@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -69,15 +70,17 @@ func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Reques
 // ServeInfo : Provides info from the database to the info panel.
 func (s *Server) ServeInfo(r *http.Request) interface{} {
 
-	var fileNames []string
-	files, err := ioutil.ReadDir("./static/proc_videos/")
+	folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
+	boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
+	items, err := boxSDK.GetFolderItems(folderID, 100, 0)
 
-	if err == nil {
-		for _, file := range files {
-			if file.Name() != ".DS_Store" {
-				fileNames = append(fileNames, file.Name())
-			}
-		}
+	if err != nil {
+		log.Println(err)
+	}
+
+	var fileNames []string
+	for _, v := range items.Entries {
+		fileNames = append(fileNames, v.Name)
 	}
 
 	return struct {
@@ -101,6 +104,7 @@ type FileInfo struct {
 // UploadFiles : Handles video files uploaded to the server by users using forms in the browser.
 func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInfo FileInfo) {
 	formData := r.MultipartForm
+	boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
 
 	files := formData.File["upload-files"]
 
@@ -122,13 +126,17 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 		if tag = "A"; i%2 == 1 {
 			tag = "B"
 		}
-		out, err := os.Create("static/" + saveLocation + "/" + fileInfo.Name + "_" + tag + fileInfo.Format)
+		out, err := ioutil.TempFile("static/"+saveLocation+"/", fileInfo.Name+"*_"+tag+fileInfo.Format)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
-		defer out.Close()
 		if err != nil {
 			log.Println("Error: Unable to create the file to be written. Please enure you have correct write access priviliges.")
 			return
 		}
+		defer out.Close()
 
 		_, err = io.Copy(out, file)
 
@@ -137,9 +145,18 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 			log.Println(err)
 			return
 		}
+		log.Println(" *** ", out.Name())
+		folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
+		_, err = boxSDK.UploadFile(out.Name(), fileInfo.Name+"_"+tag+fileInfo.Format, folderID)
+		defer os.Remove(out.Name())
 
-		log.Println("  File uploaded successfully.")
-		log.Println("  > Filename: " + files[i].Filename)
+		if err != nil {
+			log.Println(err)
+		} else {
+
+			log.Println("  File uploaded successfully.")
+			log.Println("  > Filename: " + files[i].Filename)
+		}
 	}
 	log.Println(" Finished Upload.")
 }

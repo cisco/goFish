@@ -10,9 +10,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-
-	boxsdk "github.com/cisco/goFish/GoFishServer/BoxSDK"
-	server "github.com/cisco/goFish/GoFishServer/Server"
 )
 
 func main() {
@@ -24,6 +21,7 @@ func main() {
 	}
 	os.Setenv("URL", "127.0.0.1:")
 	os.Setenv("DB_PORT", "3306")
+	os.Setenv("vidFolder", "80573476756")
 	//go RunProcess("./FishFinder")
 	StartServer()
 }
@@ -41,18 +39,17 @@ func StartServer() {
 	}
 
 	// Create the new server.
-	ser := server.NewServer()
-	ser.DB = CreateDatabase()
-	ser.BuildHTMLTemplate("static/videos.html", "/", ser.ServeInfo)
-	ser.BuildHTMLTemplate("static/videos.html", "/upload/", server.HandleUpload)
-	ser.BuildHTMLTemplate("static/videos.html", "/processing/", server.HandleRulerHTML)
+	server := NewServer()
+	server.DB = CreateDatabase()
+	server.BuildHTMLTemplate("static/videos.html", "/", server.ServeInfo)
+	server.BuildHTMLTemplate("static/videos.html", "/upload/", HandleUpload)
+	server.BuildHTMLTemplate("static/videos.html", "/processing/", HandleRulerHTML)
 
-	boxSDK := boxsdk.NewBoxSDK("database/211850911_ojaojsfr_config.json")
-	//boxSDK.UploadFile("./GoFish.go", "Test8000.go", 0)
-	boxSDK.DownloadFile(482462232448)
-	//boxSDK.GetFolderItems(0, 10, 0)
+	boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
+	log.Println(boxSDK.GetFolderItems(80573476756, 10, 0))
+	log.Println(boxSDK.DownloadFile(482584883421))
 
-	handler := &http.Server{Addr: addr, Handler: ser}
+	handler := &http.Server{Addr: addr, Handler: server}
 
 	go func() {
 		if err := handler.ListenAndServe(); err != nil {
@@ -62,7 +59,7 @@ func StartServer() {
 
 	// Check if interruption event happened
 	<-stop
-	log.Println("=> Gracefully shutting down the server...")
+	log.Println("\r=> Gracefully shutting down the server...")
 
 	context, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
@@ -98,10 +95,10 @@ func RunProcess(instr string) {
 }
 
 // CreateDatabase : Handles the creation of and/or connection to a database.
-func CreateDatabase() *server.Database {
+func CreateDatabase() *Database {
 	addr := os.Getenv("DB_PORT")
 	port, _ := strconv.Atoi(addr)
-	db := server.NewDatabase(port)
+	db := NewDatabase(port)
 
 	db.ConnectDB(os.Getenv("URL") + addr)
 	db.CreateDB("fishTest")
