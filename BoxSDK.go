@@ -38,59 +38,137 @@ type BoxJWTRequest struct {
 	EnterpriseID string `json:"enterpriseID"`
 }
 
-type User struct {
+// AccessResponse : Object returned by a successful request to the Box API.
+type AccessResponse struct {
+	AccessToken  string        `json:"access_token"`
+	ExpiresIn    int           `json:"expires_in"`
+	RestrictedTo []interface{} `json:"restricted_to"`
+	TokenType    string        `json:"token_type"`
+}
+
+type FileObject struct {
+	Type           string         `json:"type"`
+	ID             string         `json:"id"`
+	FileVersion    FileVersion    `json:"file_version"`
+	SequenceID     string         `json:"sequence_id"`
+	Etag           string         `json:"etag"`
+	Sha1           string         `json:"sha1"`
+	Name           string         `json:"name"`
+	Description    string         `json:"description"`
+	Size           int            `json:"size"`
+	PathCollection PathCollection `json:"path_collection"`
+	CreatedAt      string         `json:"created_at"`
+	ModifiedAt     string         `json:"modified_at"`
+	CreatedBy      CreatedBy      `json:"created_by"`
+	ModifiedBy     ModifiedBy     `json:"modified_by"`
+	OwnedBy        OwnedBy        `json:"owned_by"`
+	SharedLink     SharedLink     `json:"shared_link"`
+	Parent         Parent         `json:"parent"`
+	ItemStatus     string         `json:"item_status"`
+}
+
+type FolderObject struct {
+	Type              string            `json:"type"`
+	ID                string            `json:"id"`
+	SequenceID        string            `json:"sequence_id"`
+	Etag              string            `json:"etag"`
+	Name              string            `json:"name"`
+	CreatedAt         string            `json:"created_at"`
+	ModifiedAt        string            `json:"modified_at"`
+	Description       string            `json:"description"`
+	Size              int               `json:"size"`
+	PathCollection    PathCollection    `json:"path_collection"`
+	CreatedBy         CreatedBy         `json:"created_by"`
+	ModifiedBy        ModifiedBy        `json:"modified_by"`
+	OwnedBy           OwnedBy           `json:"owned_by"`
+	SharedLink        SharedLink        `json:"shared_link"`
+	FolderUploadEmail FolderUploadEmail `json:"folder_upload_email"`
+	Parent            Parent            `json:"parent"`
+	ItemStatus        string            `json:"item_status"`
+	ItemCollection    ItemCollection    `json:"item_collection"`
+	Tags              []string          `json:"tags"`
+}
+
+type FileVersion struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+	Sha1 string `json:"sha1"`
+}
+
+type Entries struct {
+	Type       string      `json:"type"`
+	ID         string      `json:"id"`
+	SequenceID interface{} `json:"sequence_id"`
+	Etag       interface{} `json:"etag"`
+	Name       string      `json:"name"`
+}
+
+type PathCollection struct {
+	TotalCount int       `json:"total_count"`
+	Entries    []Entries `json:"entries"`
+}
+
+type CreatedBy struct {
 	Type  string `json:"type"`
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Login string `json:"login"`
 }
 
-// TODO: Fill these out. See "https://developer.box.com/reference" for reference on these.
-type FileObject struct {
-	Type        string `json:"type"`
-	ID          string `json:"id"`
-	FileVerison struct {
-		Type string `json:"type"`
-		ID   string `json:"id"`
-		SHA1 string `json:"sha1"`
-	} `json:"file_version"`
-	SequenceID     string `json:"sequence_id"`
-	ETag           string `json:"etag"`
-	SHA1           string `json:"sha1"`
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	Size           int    `json:"size"`
-	PathCollection struct {
-		TotalCount int `json:"total_count"`
-		Entries    []struct {
-			Type       string `json:"type"`
-			ID         string `json:"id"`
-			SequenceID string `json:"sequence_id"`
-			ETag       string `json:"etag"`
-			Name       string `json:"name"`
-		} `json:"entries"`
-	} `json:"path_collection"`
-	CreatedAt        time.Time `json:"created_at"`
-	ModifiedAt       time.Time `json:"modified_at"`
-	TrashedAt        time.Time `json:"trashed_at"`
-	PurgedAt         time.Time `json:"purged_at"`
-	ContentCreatedAt time.Time `json:"content_created_at"`
-	ConentModifiedAt time.Time `json:"content_modified_at"`
-	ExpiresAt        time.Time `json:"expires_at"`
-	CreatedBy        User      `json:"created_by"`
-	ModifiedBy       User      `json:"modified_by"`
-	OwnedBy          User      `json:"owned_by"`
-	SharedLink       string    `json:"shared_link"`
-	Parent           struct {
-	} `json:"parent"`
-	ItemStatus    string `json:"item_status"`
-	VersionNumber string `json:"version_number"`
-	CommentCount  int    `json:"comment_count"`
-	Permissions   struct {
-	} `json:"permissions"`
+type ModifiedBy struct {
+	Type  string `json:"type"`
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Login string `json:"login"`
 }
 
-type FolderObject struct {
+type OwnedBy struct {
+	Type  string `json:"type"`
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Login string `json:"login"`
+}
+
+type Permissions struct {
+	CanDownload bool `json:"can_download"`
+	CanPreview  bool `json:"can_preview"`
+}
+
+type SharedLink struct {
+	URL               string      `json:"url"`
+	DownloadURL       interface{} `json:"download_url"`
+	VanityURL         interface{} `json:"vanity_url"`
+	IsPasswordEnabled bool        `json:"is_password_enabled"`
+	UnsharedAt        interface{} `json:"unshared_at"`
+	DownloadCount     int         `json:"download_count"`
+	PreviewCount      int         `json:"preview_count"`
+	Access            string      `json:"access"`
+	Permissions       Permissions `json:"permissions"`
+}
+
+type FolderUploadEmail struct {
+	Access string `json:"access"`
+	Email  string `json:"email"`
+}
+
+type Parent struct {
+	Type       string      `json:"type"`
+	ID         string      `json:"id"`
+	SequenceID interface{} `json:"sequence_id"`
+	Etag       interface{} `json:"etag"`
+	Name       string      `json:"name"`
+}
+
+type ItemCollection struct {
+	TotalCount int       `json:"total_count"`
+	Entries    []Entries `json:"entries"`
+	Offset     int       `json:"offset"`
+	Limit      int       `json:"limit"`
+}
+
+type Order struct {
+	By        string `json:"by"`
+	Direction string `json:"direction"`
 }
 
 // NewBoxSDK : Creates a new server authenticator.
@@ -100,14 +178,14 @@ func NewBoxSDK(file string) *BoxSDK {
 	return box
 }
 
-// BoxHTTPRequest : Runs an HTTP request via a defined method.
-func (box *BoxSDK) BoxHTTPRequest(method string, url string, payload io.Reader, headers map[string]string) (io.ReadCloser, interface{}, error) {
+// HTTPRequest : Runs an HTTP request via a defined method.
+func (box *BoxSDK) HTTPRequest(method string, url string, payload io.Reader, headers map[string]string) ([]byte, error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		log.Println(err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	if headers != nil {
@@ -125,46 +203,40 @@ func (box *BoxSDK) BoxHTTPRequest(method string, url string, payload io.Reader, 
 
 	response, err := client.Do(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer response.Body.Close()
 
-	decoder := json.NewDecoder(response.Body)
-	var d interface{}
-	decoder.Decode(&d)
+	respBytes, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 
-	log.Println(response)
-	out, err := os.Create("./downloads/TEST.go")
-	if err != nil {
-		return nil, nil, err
-	}
-	defer out.Close()
+	log.Println(response.Body)
 
-	_, err = io.Copy(out, response.Body)
-
+	log.Println(response.Header)
 	log.Println(" >> Status :", response.StatusCode)
-	return response.Body, d, nil
+	return respBytes, nil
 }
 
 // RequestAccessToken : Get valid ACCESS_TOKEN using JWT.
-func (box *BoxSDK) RequestAccessToken() {
+func (box *BoxSDK) RequestAccessToken() error {
 	name, err := ioutil.ReadFile(box.configFile)
 	var boxConfig BoxJWTRequest
 
 	err = json.Unmarshal(name, &boxConfig)
 
 	if err != nil {
-		log.Printf("Error: %s\n", err)
+		log.Println(err)
+		return err
 	}
 
 	// Create a unique 32 character long string.
-	var jti string
 	rBytes := make([]byte, 32)
 	_, err = rand.Read(rBytes)
-	if err == nil {
-		jti = base64.URLEncoding.EncodeToString(rBytes)
+	if err != nil {
+		log.Println(err)
+		return err
 	}
+	jti := base64.URLEncoding.EncodeToString(rBytes)
 
 	// Build the header. This includes the PublicKey as the ID.
 	token := jwt.New(jwt.SigningMethodRS512)
@@ -187,6 +259,7 @@ func (box *BoxSDK) RequestAccessToken() {
 
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 
 	// Build the assertion from the signedKey and claims.
@@ -194,6 +267,7 @@ func (box *BoxSDK) RequestAccessToken() {
 
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 
 	// Build the access token request.
@@ -204,21 +278,29 @@ func (box *BoxSDK) RequestAccessToken() {
 	payload.Add("client_secret", boxConfig.BoxAppSettings.ClientSecret)
 
 	// Post the request to the Box API.
-	_, response, err := box.BoxHTTPRequest("POST", os.Getenv("authURL"), bytes.NewBufferString(payload.Encode()), nil)
+	response, err := box.HTTPRequest("POST", os.Getenv("authURL"), bytes.NewBufferString(payload.Encode()), nil)
 	if err != nil {
 		log.Println(err)
-		return
+		return err
 	}
-	box.accessToken = response.(map[string]interface{})["access_token"].(string)
 
+	// Set the access token.
+	var ar AccessResponse
+	err = json.Unmarshal(response, &ar)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	box.accessToken = ar.AccessToken
+
+	return nil
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File Functions
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // UploadFile : Creates an Access Token to the Box API, then uploads a given name to the specified folder.
-func (box *BoxSDK) UploadFile(name string, newName string, folderID int) {
+func (box *BoxSDK) UploadFile(name string, newName string, folderID int) (*FileObject, error) {
 	box.RequestAccessToken()
 
 	if newName == "" {
@@ -232,99 +314,99 @@ func (box *BoxSDK) UploadFile(name string, newName string, folderID int) {
 	headers := make(map[string]string)
 	headers["content-type"] = "multipart/form-payload; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW"
 
-	_, response, err := box.BoxHTTPRequest("POST", url, payload, headers)
+	response, err := box.HTTPRequest("POST", url, payload, headers)
 	if err != nil {
 		log.Println(err)
-		return
+		return nil, err
 	}
-	log.Println(response)
+
+	fileObject := &FileObject{}
+	json.Unmarshal(response, &fileObject)
+
+	return fileObject, nil
 }
 
-// TODO: Figure out a return value for this.
 // GetFileInfo : Returns information about the file with 'ID' fileID.
-func (box *BoxSDK) GetFileInfo(fileID int) {
+func (box *BoxSDK) GetFileInfo(fileID int) (*FileObject, error) {
 	box.RequestAccessToken()
-	_, response, err := box.BoxHTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID), nil, nil)
+	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID), nil, nil)
 	if err != nil {
 		log.Println(err)
-		return
+		return nil, err
 	}
-	// TODO: Figure out a return value.
-	log.Println(response)
+	fileObject := &FileObject{}
+	json.Unmarshal(response, &fileObject)
+
+	return fileObject, nil
 }
 
-// TODO: The Box API has a strange way of handling downloads, so need to figure out a work around.
 // DownloadFile : Downloads a file with 'ID' fileID.
-func (box *BoxSDK) DownloadFile(fileID int) {
+func (box *BoxSDK) DownloadFile(fileID int) (interface{}, error) {
 	box.RequestAccessToken()
-	response, _, err := box.BoxHTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID)+"/content", nil, nil)
+	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID)+"/content", nil, nil)
 	if err != nil {
 		log.Println(err)
-		return
+		return nil, err
 	}
-	log.Println(response)
-	out, err := os.Create("./downloads/TEST.go")
-	if err != nil {
-		return
-	}
-	defer out.Close()
+	log.Println(string(response))
 
-	_, err = io.Copy(out, response)
+	var fileObject interface{}
+	json.Unmarshal(response, &fileObject)
+
+	return fileObject, nil
 }
 
 // DeleteFile : Deletes a file in a specific folder with 'ID" fileID.
-func (box *BoxSDK) DeleteFile(fileID int, etag string) {
+func (box *BoxSDK) DeleteFile(fileID int, etag string) error {
 	box.RequestAccessToken()
 	headers := make(map[string]string)
 	headers["If-Match"] = etag
-	_, _, err := box.BoxHTTPRequest("DELETE", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID), nil, headers)
+	_, err := box.HTTPRequest("DELETE", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID), nil, headers)
 	if err != nil {
 		log.Println(err)
-		return
+		return err
 	}
+	return nil
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Folder Functions
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // CreateFolder : Creates a new folder under the parent folder that has 'ID' parentFolderID.
-func (box *BoxSDK) CreateFolder(name string, parentFolderID int) {
+func (box *BoxSDK) CreateFolder(name string, parentFolderID int) (*FolderObject, error) {
 	box.RequestAccessToken()
 	body := strings.NewReader(`{"name":"` + name + `", "parent": {"id": "` + strconv.Itoa(parentFolderID) + `"}}`)
 
-	_, response, err := box.BoxHTTPRequest("POST", "https://api.box.com/2.0/folders", body, nil)
+	response, err := box.HTTPRequest("POST", "https://api.box.com/2.0/folders", body, nil)
 	if err != nil {
 		log.Println(err)
-		return
+		return nil, err
 	}
-	// TODO: Figure out what's happening here.
-	log.Println(response)
+	folderObject := &FolderObject{}
+	json.Unmarshal(response, &folderObject)
+
+	return folderObject, nil
 }
 
-// TODO: Figure out a return value for this.
 // GetFolderItems : Returns all the items contained inside the folder with 'ID' folderID.
-func (box *BoxSDK) GetFolderItems(folderID int, limit int, offset int) {
+func (box *BoxSDK) GetFolderItems(folderID int, limit int, offset int) (*ItemCollection, error) {
 	box.RequestAccessToken()
 
-	_, response, err := box.BoxHTTPRequest("GET", "https://api.box.com/2.0/folders/"+strconv.Itoa(folderID)+"/items?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset), nil, nil)
+	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/folders/"+strconv.Itoa(folderID)+"/items?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset), nil, nil)
 	if err != nil {
 		log.Println(err)
-		return
+		return nil, err
 	}
-	// TODO: Figure out what's happening here.
-	log.Println(response)
-	if response != nil {
-		for i, v := range response.(map[string]interface{}) {
-			log.Println(i, v)
-		}
-	}
+	items := &ItemCollection{}
+	json.Unmarshal(response, &items)
+
+	return items, nil
 }
 
 // DeleteFolder : Deletes the folder with 'ID' folderID.
 func (box *BoxSDK) DeleteFolder(folderID int) {
 	box.RequestAccessToken()
-	_, _, err := box.BoxHTTPRequest("DELETE", "https://api.box.com/2.0/folders/"+strconv.Itoa(folderID)+"?recursive=true", nil, nil)
+	_, err := box.HTTPRequest("DELETE", "https://api.box.com/2.0/folders/"+strconv.Itoa(folderID)+"?recursive=true", nil, nil)
 	if err != nil {
 		log.Println(err)
 		return
