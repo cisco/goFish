@@ -1,6 +1,7 @@
 github.com/cisco/goFish v0.0.0-20190627180155-9e3da0aa35ce h1:IRJuk46obevISBJa0ySXuo1jgtPlhomD5zJdiYw5Ihw=
 github.com/cisco/goFish v0.0.0-20190627180155-9e3da0aa35ce/go.mod h1:bN8zBeYRJh8lmFmwMsipNFF0irYMuXaCMR/nmA55Zk0=
 github.com/cisco/goFish v0.0.0-20190627180507-0fc97970471e h1:b9ghkbOPiRFyUULoCWdCSGyBAlmFlCDy8gzn2xKTxxs=
+github.com/cisco/goFish v0.0.0-20190627180912-d9c972040857 h1:wuraz6i/oap70yCqV3c011cd9AZLED5+pufK2Hu1jZQ=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/go-sql-driver/mysql v1.4.1 h1:g24URVg0OFbNUTx9qqY1IRZ9D9z3iPyi5zKhQZpNwpA=
