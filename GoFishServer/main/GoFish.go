@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	boxsdk "github.com/cisco/goFish/BoxSDK"
-	server "github.com/cisco/goFish/Server"
+	boxsdk "github.com/cisco/goFish/GoFishServer/BoxSDK"
+	server "github.com/cisco/goFish/GoFishServer/Server"
 )
 
 func main() {
