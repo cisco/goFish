@@ -1,4 +1,4 @@
-package boxsdk
+package main
 
 import (
 	"bytes"
