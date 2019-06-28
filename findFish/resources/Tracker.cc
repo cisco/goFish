@@ -60,7 +60,7 @@ void Tracker::GetObjectContours(cv::Mat& frame)
     {
         cv::RNG rng(12345);
         cv::Mat drawing = cv::Mat::zeros(canny_output.size(), CV_8UC3);
-        for (int i = 0; i < contours.size(); i++)
+        for (size_t i = 0; i < contours.size(); i++)
         {
             cv::approxPolyDP(contours[i], prec_conts[i], 3, true);
             cv::Scalar colour = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
