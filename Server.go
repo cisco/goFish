@@ -10,14 +10,23 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // Server : Server object to handle HTTP requests.
 type Server struct {
-	MUX *http.ServeMux
-	DB  *Database
+	MUX  *http.ServeMux
+	DB   *Database
+	Box  *BoxSDK
+	Info *ServerInfo
+}
+
+// ServerInfo : Returns information about the server.
+type ServerInfo struct {
+	DBConnected  bool
+	BoxConnected bool
 }
 
 // NewServer : Constructs a new Server type.
@@ -69,15 +78,16 @@ func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Reques
 // ServeInfo : Provides info from the database to the info panel.
 func (s *Server) ServeInfo(r *http.Request) interface{} {
 
-	var fileNames []string
-	files, err := ioutil.ReadDir("./static/proc_videos/")
+	folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
+	items, err := s.Box.GetFolderItems(folderID, 1000, 0)
 
-	if err == nil {
-		for _, file := range files {
-			if file.Name() != ".DS_Store" {
-				fileNames = append(fileNames, file.Name())
-			}
-		}
+	if err != nil {
+		log.Println(err)
+	}
+
+	var fileNames []string
+	for _, v := range items.Entries {
+		fileNames = append(fileNames, v.Name)
 	}
 
 	return struct {
@@ -101,10 +111,11 @@ type FileInfo struct {
 // UploadFiles : Handles video files uploaded to the server by users using forms in the browser.
 func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInfo FileInfo) {
 	formData := r.MultipartForm
+	boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
 
 	files := formData.File["upload-files"]
 
-	// Iterate through each file and create a copy on the server.
+	// Iterate through each file and create a temporary copy on the server, then send it to Box.
 	for i := range files {
 		file, err := files[i].Open()
 
@@ -122,24 +133,38 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 		if tag = "A"; i%2 == 1 {
 			tag = "B"
 		}
-		out, err := os.Create("static/" + saveLocation + "/" + fileInfo.Name + "_" + tag + fileInfo.Format)
+		out, err := ioutil.TempFile("static/"+saveLocation+"/", fileInfo.Name+"*_"+tag+fileInfo.Format)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		defer os.Remove(out.Name())
 
-		defer out.Close()
 		if err != nil {
 			log.Println("Error: Unable to create the file to be written. Please enure you have correct write access priviliges.")
 			return
 		}
+		defer out.Close()
 
 		_, err = io.Copy(out, file)
 
+		// Upload temp file to box.
+		folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
+		fileObject, err := boxSDK.UploadFile(out.Name(), fileInfo.Name+"*_"+tag+fileInfo.Format, folderID)
+		log.Println(fileObject)
+
+		if err != nil {
+			log.Println(err)
+		} else {
+
+			log.Println(" File uploaded successfully.")
+			log.Println("  > New Filename: " + fileInfo.Name + "*_" + tag + fileInfo.Format)
+		}
 		if err != nil {
 			log.Print("Error: ")
 			log.Println(err)
 			return
 		}
-
-		log.Println("  File uploaded successfully.")
-		log.Println("  > Filename: " + files[i].Filename)
 	}
 	log.Println(" Finished Upload.")
 }
@@ -167,19 +192,35 @@ type VideoInfo struct {
 // HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload
 // the files.
 func HandleVideoHTML(r *http.Request) interface{} {
-	//err := r.ParseMultipartForm(10 << 20)
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)
 		var d interface{}
 		decoder.Decode(&d)
 
-		//videoName := GetFileName(r, "select-video")
 		videoName := d.(map[string]interface{})["file"].(string)
 
 		if videoName == "" {
 			return struct{ VideosLoaded bool }{false}
 		}
 		log.Println(" > Selecting video:" + videoName)
+
+		folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
+		boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
+		items, err := boxSDK.GetFolderItems(folderID, 1000, 0)
+
+		var fileID int
+		for _, v := range items.Entries {
+			if v.Name == videoName {
+				fileID, _ = strconv.Atoi(v.ID)
+				break
+			}
+		}
+
+		err = boxSDK.DownloadFile(fileID, "static/proc_videos/")
+		if err != nil {
+			log.Println(err)
+			return struct{ VideosLoaded bool }{false}
+		}
 
 		tag := strings.TrimSuffix(videoName, ".mp4")
 		file, err := ioutil.ReadFile("static/video-info/DE_" + tag + ".json")
@@ -192,13 +233,14 @@ func HandleVideoHTML(r *http.Request) interface{} {
 			VideosLoaded bool
 			VideoInfo    VideoInfo
 		}{
-			videoName != "",
-			VideoInfo{videoName, tag, videoJSON},
+			strconv.Itoa(fileID) != "",
+			VideoInfo{strconv.Itoa(fileID) + ".mp4", tag, videoJSON},
 		}
 	}
 	return struct{ VideosLoaded bool }{false}
 }
 
+// HandleUpload : Handles uploading files.
 func HandleUpload(r *http.Request) interface{} {
 	err := r.ParseMultipartForm(10 << 20)
 	if err == nil {
@@ -263,6 +305,7 @@ func HandleRulerHTML(r *http.Request) interface{} {
 	return struct{}{}
 }
 
+// GetDBInfo : Gets all the info required to fill out the info form for identifying animals.
 func GetDBInfo(s *Server, r *http.Request) interface{} {
 	result, err := s.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
 	if err != nil {
@@ -271,14 +314,15 @@ func GetDBInfo(s *Server, r *http.Request) interface{} {
 	}
 	defer result.Close()
 
-	type IdName struct {
+	// IDName : Struct with a combo of ID and Name.
+	type IDName struct {
 		Id   int
 		Name string
 	}
 
-	family := make([]IdName, 0)
-	genera := make([]IdName, 0)
-	species := make([]IdName, 0)
+	family := make([]IDName, 0)
+	genera := make([]IDName, 0)
+	species := make([]IDName, 0)
 	for result.Next() {
 
 		var f, g, s string
@@ -287,9 +331,9 @@ func GetDBInfo(s *Server, r *http.Request) interface{} {
 		if err != nil {
 			panic(err)
 		}
-		family = append(family, IdName{fid, f})
-		genera = append(genera, IdName{gid, g})
-		species = append(species, IdName{sid, s})
+		family = append(family, IDName{fid, f})
+		genera = append(genera, IDName{gid, g})
+		species = append(species, IDName{sid, s})
 	}
 
 	var fileNames []string
@@ -304,9 +348,9 @@ func GetDBInfo(s *Server, r *http.Request) interface{} {
 	}
 
 	return struct {
-		Family  []IdName
-		Genera  []IdName
-		Species []IdName
+		Family  []IDName
+		Genera  []IDName
+		Species []IDName
 	}{
 		family,
 		genera,

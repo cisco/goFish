@@ -21,6 +21,7 @@ func main() {
 	}
 	os.Setenv("URL", "127.0.0.1:")
 	os.Setenv("DB_PORT", "3306")
+	os.Setenv("vidFolder", "80573476756")
 	//go RunProcess("./FishFinder")
 	StartServer()
 }
@@ -44,6 +45,8 @@ func StartServer() {
 	server.BuildHTMLTemplate("static/videos.html", "/upload/", HandleUpload)
 	server.BuildHTMLTemplate("static/videos.html", "/processing/", HandleRulerHTML)
 
+	server.Box = NewBoxSDK("database/211850911_ojaojsfr_config.json")
+
 	handler := &http.Server{Addr: addr, Handler: server}
 
 	go func() {
@@ -54,7 +57,7 @@ func StartServer() {
 
 	// Check if interruption event happened
 	<-stop
-	log.Println("=> Gracefully shutting down the server...")
+	log.Println("\r=> Gracefully shutting down the server...")
 
 	context, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
