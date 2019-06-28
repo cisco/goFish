@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -77,15 +78,15 @@ type FolderObject struct {
 	ModifiedAt        string            `json:"modified_at"`
 	Description       string            `json:"description"`
 	Size              int               `json:"size"`
-	PathCollection    PathCollection    `json:"path_collection"`
-	CreatedBy         CreatedBy         `json:"created_by"`
-	ModifiedBy        ModifiedBy        `json:"modified_by"`
-	OwnedBy           OwnedBy           `json:"owned_by"`
-	SharedLink        SharedLink        `json:"shared_link"`
-	FolderUploadEmail FolderUploadEmail `json:"folder_upload_email"`
-	Parent            Parent            `json:"parent"`
+	PathCollection    PathCollection    `json:"path_collection,omitempty"`
+	CreatedBy         CreatedBy         `json:"created_by,omitempty"`
+	ModifiedBy        ModifiedBy        `json:"modified_by,omitempty"`
+	OwnedBy           OwnedBy           `json:"owned_by,omitempty"`
+	SharedLink        SharedLink        `json:"shared_link,omitempty"`
+	FolderUploadEmail FolderUploadEmail `json:"folder_upload_email,omitempty"`
+	Parent            Parent            `json:"parent,omitempty"`
 	ItemStatus        string            `json:"item_status"`
-	ItemCollection    ItemCollection    `json:"item_collection"`
+	ItemCollection    ItemCollection    `json:"item_collection,omitempty"`
 	Tags              []string          `json:"tags"`
 }
 
@@ -95,12 +96,32 @@ type FileVersion struct {
 	Sha1 string `json:"sha1"`
 }
 
-type Entries struct {
+type EntriesMini struct {
 	Type       string      `json:"type"`
 	ID         string      `json:"id"`
-	SequenceID interface{} `json:"sequence_id"`
-	Etag       interface{} `json:"etag"`
+	SequenceID interface{} `json:"sequence_id,omitempty"`
+	Etag       interface{} `json:"etag,omitempty"`
 	Name       string      `json:"name"`
+}
+
+type Entries struct {
+	EntriesMini
+	Sha1              string         `json:"sha1 "`
+	Description       string         `json:"description"`
+	Size              int            `json:"size"`
+	PathCollection    PathCollection `json:"path_collection,omitempty"`
+	CreatedAt         string         `json:"created_at"`
+	ModifiedAt        string         `json:"modified_at"`
+	TrashedAt         interface{}    `json:"trashed_at,omitempty"`
+	PurgedAt          interface{}    `json:"purged_at,omitempty"`
+	ContentCreatedAt  string         `json:"content_created_at"`
+	ContentModifiedAt string         `json:"content_modified_at"`
+	CreatedBy         CreatedBy      `json:"created_by,omitempty"`
+	ModifiedBy        ModifiedBy     `json:"modified_by,omitempty"`
+	OwnedBy           OwnedBy        `json:"owned_by,omitempty"`
+	SharedLink        SharedLink     `json:"shared_link,omitempty"`
+	Parent            Parent         `json:"parent,omitempty"`
+	ItemStatus        string         `json:"item_status"`
 }
 
 type PathCollection struct {
@@ -136,14 +157,14 @@ type Permissions struct {
 
 type SharedLink struct {
 	URL               string      `json:"url"`
-	DownloadURL       interface{} `json:"download_url"`
-	VanityURL         interface{} `json:"vanity_url"`
+	DownloadURL       interface{} `json:"download_url,omitempty"`
+	VanityURL         interface{} `json:"vanity_url,omitempty"`
 	IsPasswordEnabled bool        `json:"is_password_enabled"`
-	UnsharedAt        interface{} `json:"unshared_at"`
+	UnsharedAt        interface{} `json:"unshared_at,omitempty"`
 	DownloadCount     int         `json:"download_count"`
 	PreviewCount      int         `json:"preview_count"`
 	Access            string      `json:"access"`
-	Permissions       Permissions `json:"permissions"`
+	Permissions       Permissions `json:"permissions,omitempty"`
 }
 
 type FolderUploadEmail struct {
@@ -154,8 +175,8 @@ type FolderUploadEmail struct {
 type Parent struct {
 	Type       string      `json:"type"`
 	ID         string      `json:"id"`
-	SequenceID interface{} `json:"sequence_id"`
-	Etag       interface{} `json:"etag"`
+	SequenceID interface{} `json:"sequence_id,omitempty"`
+	Etag       interface{} `json:"etag,omitempty"`
 	Name       string      `json:"name"`
 }
 
@@ -210,10 +231,8 @@ func (box *BoxSDK) HTTPRequest(method string, url string, payload io.Reader, hea
 	respBytes, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 
-	log.Println(response.Body)
-
-	log.Println(response.Header)
-	log.Println(" >> Status :", response.StatusCode)
+	log.Println(" >> URL    :", url)
+	log.Println(" >> Status :", response.Status)
 	return respBytes, nil
 }
 
@@ -249,7 +268,7 @@ func (box *BoxSDK) RequestAccessToken() error {
 	claims["box_sub_type"] = "enterprise"
 	claims["aud"] = os.Getenv("authURL")
 	claims["jti"] = jti
-	claims["exp"] = time.Now().Add(time.Second * 30).Unix()
+	claims["exp"] = time.Now().Add(time.Second * 60).Unix()
 
 	// Decrypt the PrivateKey using its passphrase.
 	signedKey, err := jwt.ParseRSAPrivateKeyFromPEMWithPassword(
@@ -300,27 +319,56 @@ func (box *BoxSDK) RequestAccessToken() error {
 // File Functions
 
 // UploadFile : Creates an Access Token to the Box API, then uploads a given name to the specified folder.
-func (box *BoxSDK) UploadFile(name string, newName string, folderID int) (*FileObject, error) {
+func (box *BoxSDK) UploadFile(name string, newName string, folderID int) (*PathCollection, error) {
 	box.RequestAccessToken()
 
 	if newName == "" {
 		newName = name
 	}
 
-	url := "https://upload.box.com/api/2.0/files/content?attributes={%22name%22:%22" + newName + "%22,%20%22parent%22:{%22id%22:%22" + strconv.Itoa(folderID) + "%22}}"
+	file, err := os.Open(name)
+	if err != nil {
+		log.Println(err)
+	}
+	defer file.Close()
 
-	payload := strings.NewReader("------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"file\"; filename=\"" + name + "\"\r\nContent-Type: false\r\n\r\n\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--")
+	contents, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Println(err)
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("file", name)
+	if err != nil {
+		log.Println(err)
+	}
+	part.Write(contents)
+
+	err = writer.WriteField("filename", name)
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		log.Println(err)
+	}
 
 	headers := make(map[string]string)
-	headers["content-type"] = "multipart/form-payload; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW"
+	headers["Content-Type"] = writer.FormDataContentType()
+	headers["Content-Length"] = string(body.Len())
 
-	response, err := box.HTTPRequest("POST", url, payload, headers)
+	response, err := box.HTTPRequest("POST",
+		"https://upload.box.com/api/2.0/files/content?attributes={%22name%22:%22"+newName+"%22,%20%22parent%22:{%22id%22:%22"+strconv.Itoa(folderID)+"%22}}",
+		body, headers)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	fileObject := &FileObject{}
+	fileObject := &PathCollection{}
 	json.Unmarshal(response, &fileObject)
 
 	return fileObject, nil
@@ -341,19 +389,28 @@ func (box *BoxSDK) GetFileInfo(fileID int) (*FileObject, error) {
 }
 
 // DownloadFile : Downloads a file with 'ID' fileID.
-func (box *BoxSDK) DownloadFile(fileID int) (interface{}, error) {
+func (box *BoxSDK) DownloadFile(fileID int, location string) error {
 	box.RequestAccessToken()
 	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID)+"/content", nil, nil)
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return err
 	}
-	log.Println(string(response))
 
-	var fileObject interface{}
-	json.Unmarshal(response, &fileObject)
+	fInfo, err := box.GetFileInfo(fileID)
+	file, err := os.Create(location + fInfo.Name)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer file.Close()
 
-	return fileObject, nil
+	_, err = file.Write(response)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 // DeleteFile : Deletes a file in a specific folder with 'ID" fileID.

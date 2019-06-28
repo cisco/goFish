@@ -17,8 +17,16 @@ import (
 
 // Server : Server object to handle HTTP requests.
 type Server struct {
-	MUX *http.ServeMux
-	DB  *Database
+	MUX  *http.ServeMux
+	DB   *Database
+	Box  *BoxSDK
+	Info *ServerInfo
+}
+
+// ServerInfo : Returns information about the server.
+type ServerInfo struct {
+	DBConnected  bool
+	BoxConnected bool
 }
 
 // NewServer : Constructs a new Server type.
@@ -71,8 +79,7 @@ func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Reques
 func (s *Server) ServeInfo(r *http.Request) interface{} {
 
 	folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
-	boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
-	items, err := boxSDK.GetFolderItems(folderID, 100, 0)
+	items, err := s.Box.GetFolderItems(folderID, 1000, 0)
 
 	if err != nil {
 		log.Println(err)
@@ -108,7 +115,7 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 
 	files := formData.File["upload-files"]
 
-	// Iterate through each file and create a copy on the server.
+	// Iterate through each file and create a temporary copy on the server, then send it to Box.
 	for i := range files {
 		file, err := files[i].Open()
 
@@ -131,6 +138,7 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 			log.Println(err)
 			return
 		}
+		defer os.Remove(out.Name())
 
 		if err != nil {
 			log.Println("Error: Unable to create the file to be written. Please enure you have correct write access priviliges.")
@@ -140,22 +148,22 @@ func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInf
 
 		_, err = io.Copy(out, file)
 
-		if err != nil {
-			log.Print("Error: ")
-			log.Println(err)
-			return
-		}
-		log.Println(" *** ", out.Name())
+		// Upload temp file to box.
 		folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
-		_, err = boxSDK.UploadFile(out.Name(), fileInfo.Name+"_"+tag+fileInfo.Format, folderID)
-		defer os.Remove(out.Name())
+		fileObject, err := boxSDK.UploadFile(out.Name(), fileInfo.Name+"*_"+tag+fileInfo.Format, folderID)
+		log.Println(fileObject)
 
 		if err != nil {
 			log.Println(err)
 		} else {
 
-			log.Println("  File uploaded successfully.")
-			log.Println("  > Filename: " + files[i].Filename)
+			log.Println(" File uploaded successfully.")
+			log.Println("  > New Filename: " + fileInfo.Name + "*_" + tag + fileInfo.Format)
+		}
+		if err != nil {
+			log.Print("Error: ")
+			log.Println(err)
+			return
 		}
 	}
 	log.Println(" Finished Upload.")
@@ -184,19 +192,35 @@ type VideoInfo struct {
 // HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload
 // the files.
 func HandleVideoHTML(r *http.Request) interface{} {
-	//err := r.ParseMultipartForm(10 << 20)
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)
 		var d interface{}
 		decoder.Decode(&d)
 
-		//videoName := GetFileName(r, "select-video")
 		videoName := d.(map[string]interface{})["file"].(string)
 
 		if videoName == "" {
 			return struct{ VideosLoaded bool }{false}
 		}
 		log.Println(" > Selecting video:" + videoName)
+
+		folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
+		boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
+		items, err := boxSDK.GetFolderItems(folderID, 1000, 0)
+
+		var fileID int
+		for _, v := range items.Entries {
+			if v.Name == videoName {
+				fileID, _ = strconv.Atoi(v.ID)
+				break
+			}
+		}
+
+		err = boxSDK.DownloadFile(fileID, "static/proc_videos/")
+		if err != nil {
+			log.Println(err)
+			return struct{ VideosLoaded bool }{false}
+		}
 
 		tag := strings.TrimSuffix(videoName, ".mp4")
 		file, err := ioutil.ReadFile("static/video-info/DE_" + tag + ".json")
@@ -209,8 +233,8 @@ func HandleVideoHTML(r *http.Request) interface{} {
 			VideosLoaded bool
 			VideoInfo    VideoInfo
 		}{
-			videoName != "",
-			VideoInfo{videoName, tag, videoJSON},
+			strconv.Itoa(fileID) != "",
+			VideoInfo{strconv.Itoa(fileID) + ".mp4", tag, videoJSON},
 		}
 	}
 	return struct{ VideosLoaded bool }{false}
