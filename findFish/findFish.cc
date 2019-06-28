@@ -47,7 +47,7 @@ int main()
         auto video_files = GetVideosFromDir(VIDEO_DIR, vid_filters);
         std::sort(video_files.begin(), video_files.end());
 
-        for (int i = 0; i < json_files.size(); i++)
+        for (size_t i = 0; i < json_files.size(); i++)
         {
             string jf = json_files[i].substr(json_files[i].find("DE_") + 3, json_files[i].length());
             jf = jf.substr(0, jf.find_last_of("."));
@@ -63,7 +63,7 @@ int main()
 #ifdef THREADED
         std::vector<std::thread> threads;
         threads.resize(video_files.size());
-        for (int i = 0; i < video_files.size() / 2; i++)
+        for (size_t i = 0; i < video_files.size() / 2; i++)
         {
             std::cout << "!!! Creating Thread: " << i << " !!!\n";
             threads[i] = thread(ProcessVideo, video_files[i], video_files[(i + 1) % video_files.size()]);
@@ -71,7 +71,7 @@ int main()
         }
 
 #else
-        for (int i = 0; i < video_files.size(); i++)
+        for (size_t i = 0; i < video_files.size(); i++)
             ProcessVideo(video_files[i], video_files[(i + 1) % video_files.size()]);
 #endif
     } while (true);
