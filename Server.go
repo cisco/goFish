@@ -233,8 +233,8 @@ func HandleVideoHTML(r *http.Request) interface{} {
 			VideosLoaded bool
 			VideoInfo    VideoInfo
 		}{
-			strconv.Itoa(fileID) != "",
-			VideoInfo{strconv.Itoa(fileID) + ".mp4", tag, videoJSON},
+			videoName != "",
+			VideoInfo{videoName, tag, videoJSON},
 		}
 	}
 	return struct{ VideosLoaded bool }{false}
