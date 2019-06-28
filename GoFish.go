@@ -45,9 +45,7 @@ func StartServer() {
 	server.BuildHTMLTemplate("static/videos.html", "/upload/", HandleUpload)
 	server.BuildHTMLTemplate("static/videos.html", "/processing/", HandleRulerHTML)
 
-	boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
-	log.Println(boxSDK.GetFolderItems(80573476756, 10, 0))
-	log.Println(boxSDK.DownloadFile(482584883421))
+	server.Box = NewBoxSDK("database/211850911_ojaojsfr_config.json")
 
 	handler := &http.Server{Addr: addr, Handler: server}
 
