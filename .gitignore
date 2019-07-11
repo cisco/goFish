@@ -39,3 +39,4 @@ static/video-info/
 *.yaml
 static/proc_videos/
 database/
+static/temp/
