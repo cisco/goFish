@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -96,14 +97,6 @@ type FileVersion struct {
 	Sha1 string `json:"sha1"`
 }
 
-type EntriesMini struct {
-	Type       string      `json:"type"`
-	ID         string      `json:"id"`
-	SequenceID interface{} `json:"sequence_id,omitempty"`
-	Etag       interface{} `json:"etag,omitempty"`
-	Name       string      `json:"name"`
-}
-
 type Entries struct {
 	EntriesMini
 	Sha1              string         `json:"sha1 "`
@@ -122,6 +115,14 @@ type Entries struct {
 	SharedLink        SharedLink     `json:"shared_link,omitempty"`
 	Parent            Parent         `json:"parent,omitempty"`
 	ItemStatus        string         `json:"item_status"`
+}
+
+type EntriesMini struct {
+	Type       string      `json:"type"`
+	ID         string      `json:"id"`
+	SequenceID interface{} `json:"sequence_id,omitempty"`
+	Etag       string      `json:"etag,omitempty"`
+	Name       string      `json:"name"`
 }
 
 type PathCollection struct {
@@ -181,15 +182,24 @@ type Parent struct {
 }
 
 type ItemCollection struct {
-	TotalCount int       `json:"total_count"`
-	Entries    []Entries `json:"entries"`
-	Offset     int       `json:"offset"`
-	Limit      int       `json:"limit"`
+	TotalCount int           `json:"total_count"`
+	Entries    []EntriesMini `json:"entries"`
+	Offset     int           `json:"offset"`
+	Limit      int           `json:"limit"`
 }
 
 type Order struct {
 	By        string `json:"by"`
 	Direction string `json:"direction"`
+}
+
+type EmbeddedFile struct {
+	Type              string `json:"type"`
+	ID                string `json:"id"`
+	Etag              string `json:"etag"`
+	ExpiringEmbedLink struct {
+		URL string `json:"url"`
+	} `json:"expiring_embed_link"`
 }
 
 // NewBoxSDK : Creates a new server authenticator.
@@ -231,8 +241,10 @@ func (box *BoxSDK) HTTPRequest(method string, url string, payload io.Reader, hea
 	respBytes, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 
-	log.Println(" >> URL    :", url)
-	log.Println(" >> Status :", response.Status)
+	if response.StatusCode != 200 {
+		log.Println(" >> URL    :", url)
+		log.Println(" >> Status :", response.Status)
+	}
 	return respBytes, nil
 }
 
@@ -268,7 +280,7 @@ func (box *BoxSDK) RequestAccessToken() error {
 	claims["box_sub_type"] = "enterprise"
 	claims["aud"] = os.Getenv("authURL")
 	claims["jti"] = jti
-	claims["exp"] = time.Now().Add(time.Second * 60).Unix()
+	claims["exp"] = time.Now().Add(time.Second * 10).Unix()
 
 	// Decrypt the PrivateKey using its passphrase.
 	signedKey, err := jwt.ParseRSAPrivateKeyFromPEMWithPassword(
@@ -319,22 +331,35 @@ func (box *BoxSDK) RequestAccessToken() error {
 // File Functions
 
 // UploadFile : Creates an Access Token to the Box API, then uploads a given name to the specified folder.
-func (box *BoxSDK) UploadFile(name string, newName string, folderID int) (*PathCollection, error) {
+func (box *BoxSDK) UploadFile(file interface{}, newName string, folderID string) (*PathCollection, error) {
 	box.RequestAccessToken()
 
-	if newName == "" {
+	t := reflect.TypeOf(file)
+
+	var name string
+	if t.Name() == "string" {
+		name = file.(string)
+	} else {
+		name = newName
+	}
+	if newName == "" && name != "" {
 		newName = name
 	}
 
-	file, err := os.Open(name)
-	if err != nil {
-		log.Println(err)
-	}
-	defer file.Close()
+	var contents []byte
+	if t.Name() == "" {
+		contents = file.([]byte)
+	} else {
+		f, err := os.Open(name)
+		if err != nil {
+			log.Println(err)
+		}
+		defer f.Close()
 
-	contents, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Println(err)
+		contents, err = ioutil.ReadAll(f)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	body := &bytes.Buffer{}
@@ -361,7 +386,7 @@ func (box *BoxSDK) UploadFile(name string, newName string, folderID int) (*PathC
 	headers["Content-Length"] = string(body.Len())
 
 	response, err := box.HTTPRequest("POST",
-		"https://upload.box.com/api/2.0/files/content?attributes={%22name%22:%22"+newName+"%22,%20%22parent%22:{%22id%22:%22"+strconv.Itoa(folderID)+"%22}}",
+		"https://upload.box.com/api/2.0/files/content?attributes={%22name%22:%22"+newName+"%22,%20%22parent%22:{%22id%22:%22"+folderID+"%22}}",
 		body, headers)
 	if err != nil {
 		log.Println(err)
@@ -375,9 +400,9 @@ func (box *BoxSDK) UploadFile(name string, newName string, folderID int) (*PathC
 }
 
 // GetFileInfo : Returns information about the file with 'ID' fileID.
-func (box *BoxSDK) GetFileInfo(fileID int) (*FileObject, error) {
+func (box *BoxSDK) GetFileInfo(fileID string) (*FileObject, error) {
 	box.RequestAccessToken()
-	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID), nil, nil)
+	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+fileID, nil, nil)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -388,10 +413,24 @@ func (box *BoxSDK) GetFileInfo(fileID int) (*FileObject, error) {
 	return fileObject, nil
 }
 
-// DownloadFile : Downloads a file with 'ID' fileID.
-func (box *BoxSDK) DownloadFile(fileID int, location string) error {
+// GetEmbedLink : Returns information about the file with 'ID' fileID.
+func (box *BoxSDK) GetEmbedLink(fileID string) (*EmbeddedFile, error) {
 	box.RequestAccessToken()
-	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID)+"/content", nil, nil)
+	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+fileID+"?fields=expiring_embed_link", nil, nil)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	fileObject := &EmbeddedFile{}
+	json.Unmarshal(response, &fileObject)
+
+	return fileObject, nil
+}
+
+// DownloadFile : Downloads a file with 'ID' fileID.
+func (box *BoxSDK) DownloadFile(fileID string, location string) error {
+	box.RequestAccessToken()
+	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+fileID+"/content", nil, nil)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -414,11 +453,11 @@ func (box *BoxSDK) DownloadFile(fileID int, location string) error {
 }
 
 // DeleteFile : Deletes a file in a specific folder with 'ID" fileID.
-func (box *BoxSDK) DeleteFile(fileID int, etag string) error {
+func (box *BoxSDK) DeleteFile(fileID string, etag string) error {
 	box.RequestAccessToken()
 	headers := make(map[string]string)
 	headers["If-Match"] = etag
-	_, err := box.HTTPRequest("DELETE", "https://api.box.com/2.0/files/"+strconv.Itoa(fileID), nil, headers)
+	_, err := box.HTTPRequest("DELETE", "https://api.box.com/2.0/files/"+fileID, nil, headers)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -430,9 +469,9 @@ func (box *BoxSDK) DeleteFile(fileID int, etag string) error {
 // Folder Functions
 
 // CreateFolder : Creates a new folder under the parent folder that has 'ID' parentFolderID.
-func (box *BoxSDK) CreateFolder(name string, parentFolderID int) (*FolderObject, error) {
+func (box *BoxSDK) CreateFolder(name string, parentFolderID string) (*FolderObject, error) {
 	box.RequestAccessToken()
-	body := strings.NewReader(`{"name":"` + name + `", "parent": {"id": "` + strconv.Itoa(parentFolderID) + `"}}`)
+	body := strings.NewReader(`{"name":"` + name + `", "parent": {"id": "` + parentFolderID + `"}}`)
 
 	response, err := box.HTTPRequest("POST", "https://api.box.com/2.0/folders", body, nil)
 	if err != nil {
@@ -446,10 +485,10 @@ func (box *BoxSDK) CreateFolder(name string, parentFolderID int) (*FolderObject,
 }
 
 // GetFolderItems : Returns all the items contained inside the folder with 'ID' folderID.
-func (box *BoxSDK) GetFolderItems(folderID int, limit int, offset int) (*ItemCollection, error) {
+func (box *BoxSDK) GetFolderItems(folderID string, limit int, offset int) (*ItemCollection, error) {
 	box.RequestAccessToken()
 
-	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/folders/"+strconv.Itoa(folderID)+"/items?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset), nil, nil)
+	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/folders/"+folderID+"/items?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset), nil, nil)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -461,9 +500,9 @@ func (box *BoxSDK) GetFolderItems(folderID int, limit int, offset int) (*ItemCol
 }
 
 // DeleteFolder : Deletes the folder with 'ID' folderID.
-func (box *BoxSDK) DeleteFolder(folderID int) {
+func (box *BoxSDK) DeleteFolder(folderID string) {
 	box.RequestAccessToken()
-	_, err := box.HTTPRequest("DELETE", "https://api.box.com/2.0/folders/"+strconv.Itoa(folderID)+"?recursive=true", nil, nil)
+	_, err := box.HTTPRequest("DELETE", "https://api.box.com/2.0/folders/"+folderID+"?recursive=true", nil, nil)
 	if err != nil {
 		log.Println(err)
 		return

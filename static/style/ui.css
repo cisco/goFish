@@ -15,6 +15,11 @@ body {
     font-family: Arial, Helvetica, sans-serif;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
     font-size: 1.5em;
+    user-select: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .navbar > div {
@@ -81,8 +86,8 @@ body {
     margin: 0;
     padding: 0;
     width: auto;
-    min-width: 2%;
-    max-width: 2%;
+    min-width: 34px;
+    max-width: 34px;
     transition: 0.5s ease-in-out;
 }
 
@@ -103,6 +108,7 @@ body {
     height: auto;
     max-height: 0;
     width: auto;
+    min-width: 0;
     max-width: 0;
     position: absolute;
     padding-right: 1em;
@@ -110,8 +116,8 @@ body {
     background-color: #f9f9f9;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
     color: #000000;
-    z-index: -1;
-    transition: max-width 0.5s ease-in-out;
+    z-index: 1;
+    transition: inherit;
 }
 
 .dropdown > div {
@@ -119,13 +125,14 @@ body {
 }
 
 .dropdown:hover {
-    min-width: 13.45%;
+    min-width: 226px;
     background: #097DBC;
 }
 
 .dropdown:hover .dropdown-content {
     max-height: 200px;
-    max-width: 13.42%;
+    min-width: 226px;
+    max-width: 226px;
     z-index: 1;
 }
 
@@ -134,24 +141,66 @@ form {
     padding: 10px;
 }
 
-dd {
-    border-left: 1px solid #000000;
-    margin-left: 0.5em;
-    padding-left: 0.5em;
-}
-
 .dropdown-content.files {
     overflow-y: scroll !important;
+    overflow-x: hidden;
 }
 
 .file-item, .no-file {
+    margin: 0;
     padding: 10px;
     font-size: 0.75em;
     background: #FFFFFF;
-    width: 100%;
+    width: 102%;
+    user-select: none;
+    white-space: nowrap;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .file-item:hover {
-    background: #9E9EA2 ;
+    background: #64BBE3;
     color: #FFFFFF;
+    cursor: pointer;
+}
+
+.file-item:active {
+    background: #9E9EA2;
+}
+
+.sidenav {
+    height: 100%;
+    width: 0;
+    grid-column: 1;
+    background: #097DBC;
+}
+
+.sidenav::after{
+    height: 2em;
+    width: 2em;
+    background: #097DBC;
+    content: ">";
+    position: relative;
+    display: block;
+    right: -2em;
+    float: right;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    text-align: center;
+}
+
+.sidenav:hover::after {
+    cursor: pointer;
+}
+
+
+.sidenav:active::after {
+    content: "<";
+}
+
+.process {
+    background: #049FD9;
+    width: 100%;
 }

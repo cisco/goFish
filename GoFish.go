@@ -2,13 +2,19 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
+	"sort"
 	"strconv"
-	"syscall"
+	"strings"
 	"time"
 )
 
@@ -19,15 +25,36 @@ func main() {
 	} else {
 		os.Setenv("PORT", "80")
 	}
+
+	// Network variables.
 	os.Setenv("URL", "127.0.0.1:")
 	os.Setenv("DB_PORT", "3306")
-	os.Setenv("vidFolder", "80573476756")
-	//go RunProcess("./FishFinder")
-	StartServer()
+
+	// Box video folders.
+	os.Setenv("mainFolder", "80559242908")
+	os.Setenv("vidFolder", "80687476563")
+	os.Setenv("procVidFolder", "80573476756")
+
+	// Box calibration folders
+	os.Setenv("calibFolder", "81405395430")
+	os.Setenv("calibImgFolder", "81405876091")
+	os.Setenv("calibResultFolder", "81406022555")
+
+	goFish := &GoFish{NewServer(), NewBoxSDK("database/211850911_ojaojsfr_config.json")}
+
+	go goFish.ProcessAndUploadVideos("./static/videos/")
+	go goFish.CalibrateCameras()
+
+	goFish.StartServer()
+}
+
+type GoFish struct {
+	server *Server
+	box    *BoxSDK
 }
 
 // StartServer : Starts up an HTTP server.
-func StartServer() {
+func (goFish *GoFish) StartServer() {
 	// Bind interruption event.
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -38,16 +65,46 @@ func StartServer() {
 		addr = ":80"
 	}
 
-	// Create the new server.
-	server := NewServer()
-	server.DB = CreateDatabase()
-	server.BuildHTMLTemplate("static/videos.html", "/", server.ServeInfo)
-	server.BuildHTMLTemplate("static/videos.html", "/upload/", HandleUpload)
-	server.BuildHTMLTemplate("static/videos.html", "/processing/", HandleRulerHTML)
+	goFish.server.DB = CreateDatabase("fishTest")
 
-	server.Box = NewBoxSDK("database/211850911_ojaojsfr_config.json")
+	items, err := goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 1000, 0)
 
-	handler := &http.Server{Addr: addr, Handler: server}
+	if err != nil {
+		log.Println(err)
+	}
+
+	var fileNames []string
+	for _, v := range items.Entries {
+		fileNames = append(fileNames, v.Name)
+	}
+
+	goFish.server.SetServeInfo(struct {
+		PageInfo func(*http.Request) interface{}
+		DBInfo   func(*http.Request) interface{}
+		Files    []string
+	}{
+		goFish.HandleVideoHTML,
+		nil, //goFish.GetFishInfo,
+		fileNames,
+	})
+
+	goFish.server.BuildHTMLTemplate("static/videos.html", "/", goFish.server.ServeInfo)
+	goFish.server.BuildHTMLTemplate("static/videos.html", "/upload/", goFish.HandleVideoUpload)
+	goFish.server.BuildHTMLTemplate("static/videos.html", "/calibrate/", goFish.HandleCalibrateUpload)
+	goFish.server.BuildHTMLTemplate("static/videos.html", "/processing/", goFish.HandleRulerHTML)
+	goFish.server.Box = goFish.box
+
+	log.Println(goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 10, 0))
+	log.Println(goFish.box.GetFolderItems("81405395430", 10, 0))
+
+	// TODO: Temporary, this shouldn't stay.
+	/*
+		for _, v := range folder.Entries {
+			goFish.box.DeleteFile(v.ID, v.Etag)
+		}
+	*/
+
+	handler := &http.Server{Addr: addr, Handler: goFish.server}
 
 	go func() {
 		if err := handler.ListenAndServe(); err != nil {
@@ -68,37 +125,323 @@ func StartServer() {
 	os.Exit(1)
 }
 
-// RunProcess : Starts up a background process.
-func RunProcess(instr string) {
-	// RunProcess the process
-	cmd := exec.Command(instr)
-	cmd.Start()
-	if cmd.Process != nil {
-		log.Printf("=== Started process with PID: %d ===\n", cmd.Process.Pid)
-
-		// Start looping timer to check that the process is still runProcessning.
+// ProcessAndUploadVideos : Handles processing videos and uploading the results to Box, then cleaning up the server-side files.
+func (goFish *GoFish) ProcessAndUploadVideos(args ...string) {
+	if len(args) > 0 {
 		for {
 			time.Sleep(1 * time.Second)
-			_, err := syscall.Getpgid(cmd.Process.Pid)
-			if err != nil {
-				log.Println("!!! Process died! Starting again...")
-				RunProcess(instr)
+			if args[0] != "" {
+				empty, size, err := IsDirEmpty(args[0])
+				if err == nil {
+					if !empty && size > 1 && (size%2) == 0 {
+						goFish.RunProcess("./FishFinder")
+					} else {
+						empty, size, err = IsDirEmpty("./static/proc_videos")
+						if !empty {
+							dir, err := os.Open("./static/proc_videos")
+							if err != nil {
+								log.Println(err)
+							}
+							defer dir.Close()
+
+							files, err := dir.Readdir(5)
+							if len(files) > 1 {
+								for _, file := range files {
+									if file.Name() != ".DS_Store" {
+										goFish.box.UploadFile("./static/proc_videos/"+file.Name(), file.Name(), os.Getenv("procVidFolder"))
+										os.Remove("./static/proc_videos/" + file.Name())
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
-	} else {
+	}
+}
+
+// CalibrateCameras : Calibrates files from specified directories.
+func (goFish *GoFish) CalibrateCameras() {
+	for {
 		time.Sleep(1 * time.Second)
-		// Try again to start the process.
-		RunProcess(instr)
+		empty, _, err := IsDirEmpty(os.Getenv("leftCameraDir"))
+		if err == nil {
+			empty, _, err = IsDirEmpty(os.Getenv("rightCameraDir"))
+			if err == nil {
+				if !empty {
+					goFish.RunProcess("./Calibrate", os.Getenv("leftCameraDir"), os.Getenv("rightCameraDir"))
+					err = os.RemoveAll(os.Getenv("leftCameraDir"))
+					if err != nil {
+						log.Println(err)
+					}
+					err = os.RemoveAll(os.Getenv("rightCameraDir"))
+					if err != nil {
+						log.Println(err)
+					}
+					os.Setenv("leftCameraDir", "")
+					os.Setenv("rightCameraDir", "")
+				}
+			}
+		}
+	}
+}
+
+// RunProcess : Starts up a background process.
+func (goFish *GoFish) RunProcess(instr string, args ...string) {
+	// Run the process
+	cmd := exec.Command(instr, args...)
+	cmd.Start()
+	defer cmd.Wait()
+
+	if cmd.Process != nil {
+		log.Printf("=== Started process with PID: %d ===\n", cmd.Process.Pid)
+		goFish.server.AddProcess(&Process{strings.TrimPrefix(instr, "./"), cmd.Process.Pid, "active", time.Now(), time.Time{}})
+		/*
+				// Start looping timer to check that the process is still running.
+				for {
+					time.Sleep(5 * time.Second)
+					_, err := syscall.Getpgid(cmd.Process.Pid)
+					if err != nil {
+						log.Println("!!! Process died! Starting again...")
+						//RunProcess(instr)
+					}
+				}
+			} else {
+				time.Sleep(1 * time.Second)
+				// Try again to start the process.
+				//RunProcess(instr)
+		*/
 	}
 }
 
 // CreateDatabase : Handles the creation of and/or connection to a database.
-func CreateDatabase() *Database {
+func CreateDatabase(name string) *Database {
 	addr := os.Getenv("DB_PORT")
 	port, _ := strconv.Atoi(addr)
 	db := NewDatabase(port)
 
-	db.ConnectDB(os.Getenv("URL") + addr)
-	db.CreateDB("fishTest")
+	db.ConnectDB(os.Getenv("URL")+addr, "root", "findingfish")
+	db.CreateDB(name)
 	return db
+}
+
+// IsDirEmpty : Checks to see if there are any files in a directory.
+func IsDirEmpty(name string) (bool, int, error) {
+	dir, err := os.Open(name)
+	if err != nil {
+		return false, 0, err
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(3)
+
+	if err == io.EOF || (len(files) == 1 && files[0].Name() == ".DS_Store") {
+		return true, 0, nil
+	}
+
+	return false, len(files) - 1, err
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Client-side functions.
+
+// VideoInfo : Structure that holds information about a video, which is passed to HTML.
+type VideoInfo struct {
+	Name string
+	Tag  string
+	JSON string
+}
+
+// HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload the files.
+func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
+	if r.Method == "POST" {
+		decoder := json.NewDecoder(r.Body)
+		var d interface{}
+		decoder.Decode(&d)
+
+		videoName := d.(map[string]interface{})["file"].(string)
+
+		if videoName == "" {
+			return struct{ VideosLoaded bool }{false}
+		}
+		log.Println(" > Selecting video:" + videoName)
+
+		// If file isn't already on the server, get it from box.
+		_, err := os.Open("static/temp/" + videoName)
+		if err != nil {
+			boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
+			items, err := boxSDK.GetFolderItems(os.Getenv("procVidFolder"), 1000, 0)
+
+			var fileID string
+			for _, v := range items.Entries {
+				if v.Name == videoName {
+					fileID = v.ID
+					break
+				}
+			}
+
+			err = boxSDK.DownloadFile(fileID, "static/temp/")
+			if err != nil {
+				log.Println(err)
+				return struct{ VideosLoaded bool }{false}
+			}
+		}
+
+		tag := strings.TrimSuffix(videoName, ".mp4")
+		file, err := ioutil.ReadFile("static/video-info/DE_" + tag + ".json")
+		videoJSON := ""
+		if err == nil {
+			videoJSON = string(file)
+		}
+
+		return struct {
+			VideosLoaded bool
+			VideoInfo    VideoInfo
+		}{
+			videoName != "",
+			VideoInfo{videoName, tag, base64.URLEncoding.EncodeToString([]byte(videoJSON))},
+		}
+	}
+	return struct{ VideosLoaded bool }{false}
+}
+
+// HandleVideoUpload : Handles uploading video files.
+func (goFish *GoFish) HandleVideoUpload(r *http.Request) interface{} {
+	err := r.ParseMultipartForm(10 << 20)
+	if err == nil {
+		t := time.Now()
+		formFields, saveLocations := make([]string, 1), make([]string, 1)
+		formFields[0] = "upload-files"
+		saveLocations[0] = "static/videos/"
+		goFish.server.UploadFiles(r, formFields, saveLocations, FileFormat{t.Format("2006-01-02-030405"), ".mp4", 10 << 20, true}, os.Getenv("vidFolder"))
+	}
+	return struct{}{}
+}
+
+// HandleCalibrateUpload : Handles uploading calibration image files.
+func (goFish *GoFish) HandleCalibrateUpload(r *http.Request) interface{} {
+	err := r.ParseMultipartForm(10 << 20)
+	if err == nil {
+		t := time.Now()
+		formFields, saveLocations := make([]string, 2), make([]string, 2)
+		formFields[0] = "left-camera-files"
+		formFields[1] = "right-camera-files"
+		saveLocations[0] = "static/calibrate/" + r.FormValue("left-camera") + "/"
+		saveLocations[1] = "static/calibrate/" + r.FormValue("right-camera") + "/"
+		goFish.server.UploadFiles(r, formFields, saveLocations, FileFormat{t.Format("2006-01-02-030405"), ".jpg", 10 << 20, false}, "")
+	}
+	return struct{}{}
+}
+
+// HandleRulerHTML : Saves points gotten in browser to a YAML file to be read by an OpenCV program to triangulate the points.
+func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
+	if r.Method == "POST" {
+		decoder := json.NewDecoder(r.Body)
+		var d interface{}
+		decoder.Decode(&d)
+
+		// Try to open the file. If it doesn't exist, create it, and write a default header.
+		header := []byte("%YAML:1.0\n---")
+		file, err := os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			log.Println(err)
+			file, err = os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_CREATE|os.O_WRONLY, 0600)
+			if err != nil {
+				log.Println(err)
+			} else {
+				file.Write(header)
+			}
+		}
+
+		// Check to see if this file already contains data.
+		temp, err := ioutil.ReadFile("config/measure_points_" + strings.TrimPrefix(r.URL.Path, "/processing/") + ".yaml")
+		s := string(temp)
+		name := "\nkeypoints:"
+		if !strings.Contains(s, name) {
+			file.Write([]byte(name))
+		}
+
+		// Build the formatted string of points to insert into the YAML file.
+		outVector := ""
+		for k, v := range d.(map[string]interface{}) {
+			keys := make([]string, 0, len(v.(map[string]interface{})))
+			for k := range v.(map[string]interface{}) {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			m := v.(map[string]interface{})
+			outVector += "\n\u0020\u0020\u0020" + k + ": [ "
+			for i, k := range keys {
+				outVector += fmt.Sprintf("%.3f", (m[k].(float64)))
+				if i != len(keys)-1 {
+					outVector += ", "
+				}
+			}
+			outVector += " ]"
+		}
+		outVector = strings.TrimRight(outVector, ",")
+		outVector += ""
+
+		file.Write([]byte(outVector))
+
+	}
+	return struct{}{}
+}
+
+// GetFishInfo : Gets all the info required to fill out the info form for identifying animals.
+func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
+	if goFish.server.DB.db != nil {
+
+		result, err := goFish.server.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
+		if err != nil {
+			log.Println(err)
+			return struct{}{}
+		}
+		defer result.Close()
+
+		// IDName : Struct with a combo of ID and Name.
+		type IDName struct {
+			Id   int
+			Name string
+		}
+
+		family := make([]IDName, 0)
+		genera := make([]IDName, 0)
+		species := make([]IDName, 0)
+		for result.Next() {
+
+			var f, g, s string
+			var fid, gid, sid int
+			err = result.Scan(&f, &fid, &g, &gid, &s, &sid)
+			if err != nil {
+				panic(err)
+			}
+			family = append(family, IDName{fid, f})
+			genera = append(genera, IDName{gid, g})
+			species = append(species, IDName{sid, s})
+		}
+
+		var fileNames []string
+		files, err := ioutil.ReadDir("./static/proc_videos/")
+
+		if err == nil {
+			for _, file := range files {
+				if file.Name() != ".DS_Store" {
+					fileNames = append(fileNames, file.Name())
+				}
+			}
+		}
+
+		return struct {
+			Family  []IDName
+			Genera  []IDName
+			Species []IDName
+		}{
+			family,
+			genera,
+			species,
+		}
+	}
+	return nil
 }

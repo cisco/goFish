@@ -34,7 +34,6 @@ void QREvent::StartEvent(int& currFrame)
         QRCodeDetector qrDetector;
         Mat boundBox;
         std::string url = qrDetector.detectAndDecode(frame_, boundBox);
-
         if (url.length() > 0 && (start_frame == -1 && end_frame == -1)) 
         {
             start_frame = currFrame;
@@ -137,7 +136,8 @@ std::vector<std::string> SplitString(std::string& str, const char* delimiter)
             result.push_back(regex_replace(temp.substr(0, i), r, ""));
             temp.erase(0, i + 1);
     }
-    result.push_back(regex_replace(temp.substr(0, i), r, ""));
+    if(regex_replace(temp.substr(0, i), r, "") != "") 
+        result.push_back(regex_replace(temp.substr(0, i), r, ""));
 
     return result;
 }

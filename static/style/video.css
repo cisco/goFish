@@ -91,6 +91,10 @@
     border: none;
 }
 
+.toolbar > button:hover {
+    cursor: pointer;
+}
+
 button.active {
     background: #6CC04A !important;
 }
@@ -99,6 +103,7 @@ button.active {
     background: #049FD9;
     color: #FFFFFF;
     padding: 0.5em 1em;
+    margin:0;
     border: none;
     border-radius: 0 0 8px 0;
 }

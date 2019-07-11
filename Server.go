@@ -1,32 +1,28 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"sort"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/fatih/structs"
+	"github.com/mitchellh/mapstructure"
 )
 
 // Server : Server object to handle HTTP requests.
 type Server struct {
-	MUX  *http.ServeMux
-	DB   *Database
-	Box  *BoxSDK
-	Info *ServerInfo
-}
-
-// ServerInfo : Returns information about the server.
-type ServerInfo struct {
-	DBConnected  bool
-	BoxConnected bool
+	MUX       *http.ServeMux
+	DB        *Database
+	Box       *BoxSDK
+	Info      interface{}
+	Processes []Process
 }
 
 // NewServer : Constructs a new Server type.
@@ -62,298 +58,165 @@ func (s *Server) HandleHTTP(dir string, fn func(w http.ResponseWriter, r *http.R
 func (s *Server) BuildHTMLTemplate(file string, dir string, fn func(*http.Request) interface{}) {
 	var tmpl = template.Must(template.ParseFiles(file))
 	s.MUX.HandleFunc(dir, func(w http.ResponseWriter, r *http.Request) {
-		/*if r.Method != http.MethodPost {
-			tmpl.Execute(w, nil)
-			return
-		}*/
+		if fn != nil {
+			// Get the function which defines what we do to the page.
+			retval := fn(r)
 
-		// Get the function which defines what we do to the page.
-		retval := fn(r)
-
-		// Execute our crafted HTML response and submit values to the page.
-		tmpl.Execute(w, retval)
+			// Execute our crafted HTML response and submit values to the page.
+			tmpl.Execute(w, retval)
+		}
 	})
 }
 
-// ServeInfo : Provides info from the database to the info panel.
-func (s *Server) ServeInfo(r *http.Request) interface{} {
-
-	folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
-	items, err := s.Box.GetFolderItems(folderID, 1000, 0)
-
-	if err != nil {
-		log.Println(err)
-	}
-
-	var fileNames []string
-	for _, v := range items.Entries {
-		fileNames = append(fileNames, v.Name)
-	}
-
-	return struct {
-		PageInfo interface{}
-		DBInfo   interface{}
-		Files    []string
-	}{
-		HandleVideoHTML(r),
-		GetDBInfo(s, r),
-		fileNames,
-	}
+// SetServeInfo : Sets the information that will be served.
+func (s *Server) SetServeInfo(info interface{}) {
+	s.Info = info
 }
 
-// FileInfo : Structure to contain information about the precise formatting of files being added to the server.
-type FileInfo struct {
-	Name    string
-	Format  string
-	MaxSize int64
+// ServeInfo : Serves the user defined info.
+func (s *Server) ServeInfo(r *http.Request) interface{} {
+	m := structs.Map(s.Info)
+	for i, v := range m {
+		if reflect.TypeOf(v).Kind() == reflect.Func {
+			if v.(func(*http.Request) interface{}) != nil {
+				m[i] = v.(func(*http.Request) interface{})(r)
+			}
+		}
+	}
+
+	var result interface{}
+	mapstructure.Decode(m, &result)
+
+	return result
+}
+
+// FileFormat : Structure to contain information about the precise formatting of files being added to the server.
+type FileFormat struct {
+	Name      string
+	Format    string
+	MaxSize   int64
+	AddSubtag bool
 }
 
 // UploadFiles : Handles video files uploaded to the server by users using forms in the browser.
-func UploadFiles(r *http.Request, formValue string, saveLocation string, fileInfo FileInfo) {
+func (s *Server) UploadFiles(r *http.Request, formValues []string, saveLocations []string, FileFormat FileFormat, boxFolderID string) {
 	formData := r.MultipartForm
-	boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
 
-	files := formData.File["upload-files"]
+	for j, field := range formValues {
+		files := formData.File[field]
 
-	// Iterate through each file and create a temporary copy on the server, then send it to Box.
-	for i := range files {
-		file, err := files[i].Open()
+		// Iterate through each file and create a temporary copy on the server, then send it to Box.
+		var prevName string
+		for i := range files {
+			file, err := files[i].Open()
 
-		defer file.Close()
-		if err != nil {
-			log.Println(err)
-			return
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			defer file.Close()
+
+			if FileFormat.AddSubtag {
+				FileFormat.Name = strings.Split(FileFormat.Name, "_")[0]
+				var tag string
+				if tag = "A"; i%2 == 1 {
+					tag = "B"
+				}
+				var temp []string
+				temp = append(temp, FileFormat.Name, tag)
+				FileFormat.Name = strings.Join(temp, "_")
+			}
+
+			if i > 1 && !FileFormat.AddSubtag {
+				FileFormat.Name = strings.Split(FileFormat.Name, "_")[0]
+				var temp []string
+				temp = append(temp, FileFormat.Name, strconv.Itoa(i))
+				FileFormat.Name = strings.Join(temp, "_")
+			}
+
+			if prevName == FileFormat.Name {
+				FileFormat.Name = strings.Split(FileFormat.Name, "_")[0]
+				var temp []string
+				temp = append(temp, FileFormat.Name, strconv.Itoa(i))
+				FileFormat.Name = strings.Join(temp, "_")
+			}
+
+			saveLocation := saveLocations[j]
+			if _, err := os.Stat(saveLocation); os.IsNotExist(err) {
+				os.MkdirAll(saveLocation, 0744)
+			}
+
+			out, err := os.Create(saveLocation + FileFormat.Name + FileFormat.Format)
+			if err != nil {
+				log.Println(err)
+				log.Println("Error: Unable to create the file to be written. Please enure you have correct write access priviliges.")
+				return
+			}
+			//defer os.Remove(out.Name()) // TODO: Figure out what to do here.
+			defer out.Close()
+
+			_, err = io.Copy(out, file)
+
+			file, err = files[i].Open()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			defer file.Close()
+
+			contents, err := ioutil.ReadFile(out.Name())
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			if len(contents) > 0 {
+				if boxFolderID != "" {
+					// Upload temp file to box.
+					fileObject, err := s.Box.UploadFile(contents, FileFormat.Name+FileFormat.Format, boxFolderID)
+					log.Println(fileObject.Entries[0].Size)
+
+					if err != nil {
+						log.Println(err)
+						log.Println("  * File not uploaded to Box!")
+					}
+				}
+
+				if err != nil {
+					log.Print("Error: ")
+					log.Println(err)
+					return
+				}
+
+				log.Println(" File uploaded successfully.")
+				log.Println("  > New Filename: " + FileFormat.Name + FileFormat.Format)
+			}
+			prevName = FileFormat.Name
 		}
-
-		if _, err := os.Stat("static/" + saveLocation); os.IsNotExist(err) {
-			os.Mkdir("static/"+saveLocation, 0777)
-		}
-
-		var tag string
-		if tag = "A"; i%2 == 1 {
-			tag = "B"
-		}
-		out, err := ioutil.TempFile("static/"+saveLocation+"/", fileInfo.Name+"*_"+tag+fileInfo.Format)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		defer os.Remove(out.Name())
-
-		if err != nil {
-			log.Println("Error: Unable to create the file to be written. Please enure you have correct write access priviliges.")
-			return
-		}
-		defer out.Close()
-
-		_, err = io.Copy(out, file)
-
-		// Upload temp file to box.
-		folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
-		fileObject, err := boxSDK.UploadFile(out.Name(), fileInfo.Name+"*_"+tag+fileInfo.Format, folderID)
-		log.Println(fileObject)
-
-		if err != nil {
-			log.Println(err)
-		} else {
-
-			log.Println(" File uploaded successfully.")
-			log.Println("  > New Filename: " + fileInfo.Name + "*_" + tag + fileInfo.Format)
-		}
-		if err != nil {
-			log.Print("Error: ")
-			log.Println(err)
-			return
-		}
+		FileFormat.Name = strings.Split(FileFormat.Name, "_")[0]
+	}
+	if len(saveLocations) > 1 {
+		os.Setenv("leftCameraDir", saveLocations[0])
+		os.Setenv("rightCameraDir", saveLocations[1])
 	}
 	log.Println(" Finished Upload.")
 }
 
-// GetFileName : If the file is valid, returns the name of the file.
-func GetFileName(r *http.Request, formField string) string {
-	r.ParseMultipartForm(10 << 20)
-	var file, handler, err = r.FormFile(formField)
-	if err != nil {
-		log.Print("Error: Selecting file, ")
-		log.Println(err)
-	} else if handler != nil && file != nil {
-		return handler.Filename
-	}
-	return ""
+// Process : A programmatic representation of a process running on the server.
+type Process struct {
+	Name        string
+	ID          int
+	Status      string
+	StartTime   time.Time
+	ElapsedTime time.Time
 }
 
-// VideoInfo : Structure that holds information about a video, which is passed to HTML.
-type VideoInfo struct {
-	Name string
-	Tag  string
-	JSON string
+// AddProcess : Adds a process to the server's list.
+func (s *Server) AddProcess(p *Process) {
+	s.Processes = append(s.Processes, *p)
 }
 
-// HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload
-// the files.
-func HandleVideoHTML(r *http.Request) interface{} {
-	if r.Method == "POST" {
-		decoder := json.NewDecoder(r.Body)
-		var d interface{}
-		decoder.Decode(&d)
-
-		videoName := d.(map[string]interface{})["file"].(string)
-
-		if videoName == "" {
-			return struct{ VideosLoaded bool }{false}
-		}
-		log.Println(" > Selecting video:" + videoName)
-
-		folderID, _ := strconv.Atoi(os.Getenv("vidFolder"))
-		boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
-		items, err := boxSDK.GetFolderItems(folderID, 1000, 0)
-
-		var fileID int
-		for _, v := range items.Entries {
-			if v.Name == videoName {
-				fileID, _ = strconv.Atoi(v.ID)
-				break
-			}
-		}
-
-		err = boxSDK.DownloadFile(fileID, "static/proc_videos/")
-		if err != nil {
-			log.Println(err)
-			return struct{ VideosLoaded bool }{false}
-		}
-
-		tag := strings.TrimSuffix(videoName, ".mp4")
-		file, err := ioutil.ReadFile("static/video-info/DE_" + tag + ".json")
-		videoJSON := ""
-		if err == nil {
-			videoJSON = string(file)
-		}
-
-		return struct {
-			VideosLoaded bool
-			VideoInfo    VideoInfo
-		}{
-			videoName != "",
-			VideoInfo{videoName, tag, videoJSON},
-		}
-	}
-	return struct{ VideosLoaded bool }{false}
-}
-
-// HandleUpload : Handles uploading files.
-func HandleUpload(r *http.Request) interface{} {
-	err := r.ParseMultipartForm(10 << 20)
-	if err == nil {
-		t := time.Now()
-		UploadFiles(r, "upload-videos", "videos/", FileInfo{t.Format("2006-01-02-030405"), ".mp4", 10 << 20})
-	}
-	return struct{}{}
-}
-
-// HandleRulerHTML : Saves points gotten in browser to a YAML file to be read by an OpenCV program to triangulate the points.
-func HandleRulerHTML(r *http.Request) interface{} {
-	if r.Method == "POST" {
-		decoder := json.NewDecoder(r.Body)
-		var d interface{}
-		decoder.Decode(&d)
-
-		// Try to open the file. If it doesn't exist, create it, and write a default header.
-		header := []byte("%YAML:1.0\n---")
-		file, err := os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_APPEND|os.O_WRONLY, 0600)
-		if err != nil {
-			log.Println(err)
-			file, err = os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_CREATE|os.O_WRONLY, 0600)
-			if err != nil {
-				log.Println(err)
-			} else {
-				file.Write(header)
-			}
-		}
-
-		// Check to see if this file already contains data.
-		temp, err := ioutil.ReadFile("config/measure_points_" + strings.TrimPrefix(r.URL.Path, "/processing/") + ".yaml")
-		s := string(temp)
-		name := "\nkeypoints:"
-		if !strings.Contains(s, name) {
-			file.Write([]byte(name))
-		}
-
-		// Build the formatted string of points to insert into the YAML file.
-		outVector := ""
-		for k, v := range d.(map[string]interface{}) {
-			keys := make([]string, 0, len(v.(map[string]interface{})))
-			for k := range v.(map[string]interface{}) {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-			m := v.(map[string]interface{})
-			outVector += "\n\u0020\u0020\u0020" + k + ": [ "
-			for i, k := range keys {
-				outVector += fmt.Sprintf("%.3f", (m[k].(float64)))
-				if i != len(keys)-1 {
-					outVector += ", "
-				}
-			}
-			outVector += " ]"
-		}
-		outVector = strings.TrimRight(outVector, ",")
-		outVector += ""
-
-		file.Write([]byte(outVector))
-
-	}
-	return struct{}{}
-}
-
-// GetDBInfo : Gets all the info required to fill out the info form for identifying animals.
-func GetDBInfo(s *Server, r *http.Request) interface{} {
-	result, err := s.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
-	if err != nil {
-		log.Println(err)
-		return struct{}{}
-	}
-	defer result.Close()
-
-	// IDName : Struct with a combo of ID and Name.
-	type IDName struct {
-		Id   int
-		Name string
-	}
-
-	family := make([]IDName, 0)
-	genera := make([]IDName, 0)
-	species := make([]IDName, 0)
-	for result.Next() {
-
-		var f, g, s string
-		var fid, gid, sid int
-		err = result.Scan(&f, &fid, &g, &gid, &s, &sid)
-		if err != nil {
-			panic(err)
-		}
-		family = append(family, IDName{fid, f})
-		genera = append(genera, IDName{gid, g})
-		species = append(species, IDName{sid, s})
-	}
-
-	var fileNames []string
-	files, err := ioutil.ReadDir("./static/proc_videos/")
-
-	if err == nil {
-		for _, file := range files {
-			if file.Name() != ".DS_Store" {
-				fileNames = append(fileNames, file.Name())
-			}
-		}
-	}
-
-	return struct {
-		Family  []IDName
-		Genera  []IDName
-		Species []IDName
-	}{
-		family,
-		genera,
-		species,
-	}
+// GetProcesses : Returns a pointer to the list of processes running on the server.
+func (s *Server) GetProcesses() *[]Process {
+	return &s.Processes
 }

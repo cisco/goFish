@@ -19,12 +19,13 @@
 
     <!-- Internal Scripts -->
     <script src="/static/scripts/ProcessVideo.js" type="text/javascript"></script>
+    <script src="/static/scripts/opencv.js" type="text/javascript"></script>
 
     <!-- Internal Links -->
     <link rel="stylesheet" type="text/css" href="/static/style/ui.css">
     <link rel="stylesheet" type="text/css" href="/static/style/video.css">
 
-    <title>Cisco: Fish Finder</title>
+    <title>Fish Finder</title>
 </head>
 
 <body>
@@ -32,7 +33,7 @@
         <div class="nav-header">Fish Finder</div>
         <div class="dropdown">
             <div class="nav-item"><i class="material-icons">&#xe1db;</i>&emsp;Processed Videos</div>
-            <div class="dropdown-content files">
+            <div class="dropdown-content files" id="files">
                 {{if .Files}}
                     {{range $i , $f := .Files}}
                         <div class="file-item">{{ $f }}</div>
@@ -40,22 +41,46 @@
                 {{else}}
                     <div class="no-file">No Files to select. Please upload some!</div>
                 {{end}}
-                </div>
+            </div>
         </div>
         <div class="dropdown">
             <div class="nav-item"><i class="material-icons">cloud_upload</i>&emsp;Upload Videos</div>
             <div class="dropdown-content">
                 <form method="post" enctype="multipart/form-data" id="upload-video" action="/upload/">
+                    <!--TODO: Get camera names from database -->
+                    <!--input type="text" name="left-cam"  placeholder="Enter left camera name" >
+                    <input type="text" name="right-cam" placeholder="Enter right camera name"><br>-->
                     <input type="file" name="upload-files" multiple><br>
                     <input type="submit" value="Upload Videos" />
                 </form>
             </div>
         </div>
         <div class="dropdown">
-        <div class="nav-item"><a href="https://github.com/cisco/goFish.git" target="_blank"><i class='fab fa-github' style="font-size: 26px;"></i>&emsp;Github</a></div>
+            <div class="nav-item"><i class='material-icons'>&#xe3af;</i>&emsp;Calibrate Cameras</div>
+            <div class="dropdown-content">
+                <form method="post" enctype="multipart/form-data" id="calibrate-cameras" action="/calibrate/">
+                    <input name="left-camera" type="text" placeholder="Enter Left Camera Name" required>
+                    <input type="file" name="left-camera-files" multiple><br>
+                    <input name="right-camera" type="text" placeholder="Enter Right Camera Name" required>
+                    <input type="file" name="right-camera-files" multiple><br>
+                    <input type="submit" value="Run Calibration"/>
+                </form>
+            </div>
+        </div>
+        <div class="dropdown">
+            <div class="nav-item"><i class='fab fa-github' style="font-size: 28px;"></i>
+                <a href="https://github.com/cisco/goFish.git" target="_blank">&emsp;Github</a>
+            </div>
         </div>
     </div>
     <div class="container">
+        <div class="sidenav" id="processes" hidden>
+            {{if .Processes}}
+                {{range $i , $p := .Processes}}
+                    <div class="process">{{ $p.ID }}</div>
+                {{end}}
+            {{end}}
+        </div>
         <div id="main-video" class="panel">
             <div class="panel-body">
                 <canvas id="adjusted-video" width="1066" height="400"></canvas>
@@ -76,7 +101,7 @@
             <div class="panel-body" style="display: flex;">
                 <div id="selected-video">
                     <video width="320" height="240" controls class="video" id="selected">
-                        <source src="/static/proc_videos/{{.PageInfo.VideoInfo.Name}}" type="video/mp4">
+                        <source src="/static/temp/{{.PageInfo.VideoInfo.Name}}" type="video/mp4">
                         Video tag is not supported by your current browser.
                     </video>
                 </div>
@@ -84,7 +109,7 @@
             </div>
         </div>
         {{if .DBInfo}}
-        <div id="info-panel" class="panel">
+        <div id="info-panel" class="panel" hidden>
             <div class="panel-header">Info</div>
             <div class="panel-body">
                 <form method="post" name="attributes-form" id="attributes-form">
@@ -143,6 +168,7 @@
     </div>
     <script src="/static/scripts/Canvas.js" type="text/javascript"></script>
     <script src="/static/scripts/Loader.js" type="text/javascript"></script>
+    
     <noscript>Whoops! It looks like your browser doesn't support JavaScript!</noscript>
 </body>
 </html>
