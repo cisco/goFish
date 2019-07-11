@@ -10,18 +10,19 @@ import (
 // Database : A structure for holding relevant DB information.
 type Database struct {
 	db   *sql.DB
+	name string
 	port int
 }
 
 // NewDatabase : Constructor for Database object.
 func NewDatabase(port int) *Database {
-	db := &Database{nil, port}
+	db := &Database{nil, "", port}
 	return db
 }
 
 // ConnectDB : Wrapper funtion for connecting to the database.
-func (db_ptr *Database) ConnectDB(url string) {
-	db, err := sql.Open("mysql", "root:findingfish@tcp("+url+")/")
+func (db_ptr *Database) ConnectDB(url string, user string, pass string) {
+	db, err := sql.Open("mysql", user+":"+pass+"@tcp("+url+")/")
 	if err != nil {
 		log.Println(err)
 	} else {
@@ -46,6 +47,7 @@ func (db_ptr *Database) CreateDB(name string) {
 			log.Println(err)
 		} else {
 			log.Print(" > Selected database \"" + name + "\"")
+			db_ptr.name = name
 		}
 	}
 }
@@ -57,5 +59,10 @@ func (db_ptr *Database) Execute(query string, args ...interface{}) (sql.Result, 
 
 // Query : Wrapper function for querying SQL.
 func (db_ptr *Database) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	_, err := db_ptr.db.Query("USE " + db_ptr.name)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
 	return db_ptr.db.Query(query)
 }

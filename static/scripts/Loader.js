@@ -6,26 +6,37 @@ var timer   = null;
 var playing = false;
 
 $(function(){
-    SubmitMultipartForms("#upload-video");
+    SubmitMultipartForms("#upload-video, #calibrate-cameras");
     HandleTools();
     $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
     $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
 
     $(".file-item").on("click", function(e){
-        $.post("/", JSON.stringify({file : $(this).html()}), function(response){ $(".container").html($('<div />').append(response).find(".container").html());});
+        $.post("/video/", JSON.stringify({file : $(this).html()}), function(response){ $(".container").html($('<div />').append(response).find(".container").html()); Refresh(e);});
     });
+
+    setInterval(function(){
+        $("#files").load(window.location.href + " #files > *");
+        $("#processes").load(window.location.href + " #processes > *");
+    }, 10000);
 });
 
-$(document).ajaxComplete(function(e){
+function Refresh(e){
+    if(e.type != "GET")
+    {
     e.preventDefault();
     e.stopImmediatePropagation();
+
+    $("#processes:after").on("click", function(e){
+        $(this).attr("width") = 100;
+    });
 
     $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
     $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
 
+
     $("#tools").draggable();
     $("#info-panel").draggable();
-    //$("#info-panel").resizable();
 
     $("#event-time-bar").on("click", function(e){
         var bar_offset = e.clientX - $(this).position().left;
@@ -65,7 +76,10 @@ $(document).ajaxComplete(function(e){
     });
 
     setTimeout(LoadAll, 1000);
-});
+}
+}
+
+//$(document).ajaxComplete();
 
 window.onload = function()
 {
@@ -83,8 +97,8 @@ function Play()
 
         timer = setInterval(function(){
             videoHandler.run();
-
             eventHandler.run();
+            
             for(var i = 0; i < toolkit.left_rulers.length; i++)
                 toolkit.left_rulers[i].Render(videoHandler.canvas);
             for(var i = 0; i < toolkit.right_rulers.length; i++)
@@ -112,6 +126,7 @@ function SeekBack()
     {
         videoHandler.adjustVideo(-30);
         setTimeout(function(){
+
             videoHandler.draw();
             eventHandler.draw();
         }, 300);
@@ -173,6 +188,7 @@ function SubmitMultipartForms(forms)
             cache: false,
             success: function(response){
                 $(".container").html($('<div />').append(response).find(".container").html());
+                Refresh(e)
             }
         });
     });
@@ -191,7 +207,6 @@ function HandleTools()
 
     $("#tools").draggable();
     $("#info-panel").draggable();
-    //$("#info-panel").resizable();
 }
 
 function GetRulers()

@@ -34,4 +34,5 @@ private:
     cv::Ptr<cv::BackgroundSubtractor> bkgd_sub_ptr;
     std::map<int, cv::Ptr<cv::CascadeClassifier>> cascades;
     std::vector<std::vector<cv::Point>> contours;
+    bool bIsActive;
 };

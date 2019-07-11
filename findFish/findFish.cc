@@ -4,6 +4,7 @@
 #include <thread>
 #include <vector>
 #include <csignal>
+#include <stdio.h>
 #include <algorithm>
 #include <time.h>
 
@@ -30,7 +31,7 @@ void ProcessVideo(std::string, std::string);
 void TriangulateSelectedPoints(Calibration*&);
 void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
 
-int main()
+int main(int argc, char** argv)
 {
     signal(SIGABRT, HandleSignal);
     signal(SIGINT, HandleSignal);
@@ -38,16 +39,20 @@ int main()
     useOptimized();
     setUseOptimized(true);
 
+    bool bHasVideos = false;
+
     // Keep the application running to continuously check for more files
     do 
     {
-        vector<string> json_filters = { ".json", ".JSON" };
+        std::vector<std::string> json_filters = { ".json", ".JSON" };
         auto json_files = GetVideosFromDir(JSON_DIR, json_filters);
-        vector<string> vid_filters = { ".mp4", ".MP4" };
+        std::vector<std::string> vid_filters = { ".mp4", ".MP4" };
         auto video_files = GetVideosFromDir(VIDEO_DIR, vid_filters);
         std::sort(video_files.begin(), video_files.end());
 
-        for (size_t i = 0; i < json_files.size(); i++)
+        bHasVideos = !video_files.empty() ? true : false;
+
+        for (size_t i = 0; i < json_files.size(); i++) 
         {
             string jf = json_files[i].substr(json_files[i].find("DE_") + 3, json_files[i].length());
             jf = jf.substr(0, jf.find_last_of("."));
@@ -59,6 +64,7 @@ int main()
                     break;
                 }
         }
+        std::sort(video_files.begin(), video_files.end());
 
 #ifdef THREADED
         std::vector<std::thread> threads;
@@ -71,10 +77,17 @@ int main()
         }
 
 #else
-        for (size_t i = 0; i < video_files.size(); i++)
+        for (size_t i = 0; i < video_files.size() / 2; i += 2)
             ProcessVideo(video_files[i], video_files[(i + 1) % video_files.size()]);
 #endif
-    } while (true);
+        if(video_files.size() > 1)
+            for(std::string video  : video_files)
+                std::remove(video.c_str());
+            
+    } while (bHasVideos);
+
+    //Calibration *calib = nullptr;
+    //TriangulateSelectedPoints(calib);
 
     return 0;
 }
@@ -116,8 +129,10 @@ void ProcessVideo(std::string file1, std::string file2)
                             true);
 
             // Setup stereo calibration and triangulate points.
-            Calibration* calib = nullptr;
-            TriangulateSelectedPoints(calib); // TODO: This is more of an "after video is processed" kind of method (since it triangulates points specified oin browser).
+            Calibration::Input input;
+            input.image_size = cv::Size(1920, 1440);
+            Calibration*  calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
+            calib->ReadCalibration();
 
             // Create the JSON object which will hold all of the detected events.
             JSON DE("DetectedEvents");
@@ -125,12 +140,12 @@ void ProcessVideo(std::string file1, std::string file2)
             // Setup QR Code detection events for the left and right videos.
             QREvent* detectQR_left = nullptr, *detectQR_right = nullptr;
 
-            // Setup the tracker
+            // Setup the tracker.
             Tracker::Settings t_conf;
-            t_conf.bDrawContours = true;
+            t_conf.bDrawContours = false;
             t_conf.MinThreshold = 200;
             
-            Tracker tracker(t_conf);
+            Tracker tracker_l(t_conf), tracker_r(t_conf);
 
             auto totalFrames = min(left_cap.get(cv::CAP_PROP_FRAME_COUNT), right_cap.get(cv::CAP_PROP_FRAME_COUNT));
             int currentFrame = 0, frameOffset = -1;
@@ -139,9 +154,9 @@ void ProcessVideo(std::string file1, std::string file2)
                 cv::Mat left_frame, right_frame;
 
                 // Read the frames only as long as either no QR code is detected, or both are detected. Keeps reading the one that isn't detected until it is.
-                if((!detectQR_left || !detectQR_left->DetectedQR()) || (detectQR_left->DetectedQR() && detectQR_right->DetectedQR()))
+                if((!detectQR_left || !detectQR_left->DetectedQR()) || (detectQR_left->DetectedQR() && detectQR_right->DetectedQR()) || left_frame.empty())
                     left_cap.read(left_frame);
-                if((!detectQR_right || !detectQR_right->DetectedQR()) || (detectQR_left->DetectedQR() && detectQR_right->DetectedQR()))
+                if((!detectQR_right || !detectQR_right->DetectedQR()) || (detectQR_left->DetectedQR() && detectQR_right->DetectedQR()) || right_frame.empty())
                     right_cap.read(right_frame);
 
                 if (left_frame.empty() || right_frame.empty())
@@ -150,26 +165,33 @@ void ProcessVideo(std::string file1, std::string file2)
                 currentFrame++;
                 if (currentFrame >= totalFrames)
                     break;
-                
+
                 // Detect QR codes in each video.
                 {
                     if (!detectQR_left || !detectQR_left->DetectedQR())
-                    { 
+                    {
                         if(detectQR_left) delete detectQR_left;
                         detectQR_left = new QREvent(left_frame);
                         detectQR_left->StartEvent(currentFrame);
-                    }
+                    } 
 
                     if (!detectQR_right || !detectQR_right->DetectedQR())
                     {
                         if(detectQR_right) delete detectQR_right;
                         detectQR_right = new QREvent(right_frame);
                         detectQR_right->StartEvent(currentFrame);
-                    }
+                    } 
+                }
+                
+                // Undistort the frames using camera calibration data.
+                if(calib)
+                {
+                    calib->UndistortImage(left_frame, 0);
+                    calib->UndistortImage(right_frame, 1);
                 }
 
-                tracker.CreateMask(left_frame);
-                tracker.CreateMask(right_frame);
+                tracker_l.CreateMask(left_frame);
+                tracker_r.CreateMask(right_frame);
 
                 // Only start writing if both videos are synced up.
                 if(detectQR_left->DetectedQR() && detectQR_right->DetectedQR())
@@ -177,28 +199,21 @@ void ProcessVideo(std::string file1, std::string file2)
                     cout << "Writing...\n";
                     // Account for frame offset from the last detected QR code frame.
                     if(frameOffset == -1) frameOffset = currentFrame;
-                    int adj_frame = (currentFrame - frameOffset);
+                    int adj_frame = (currentFrame - frameOffset);                    
 
-                    /*
-                    // Undistort the frames using camera calibration data.
-                    if(calib)
-                    {
-                        calib->UndistortImage(left_frame, 0);
-                        calib->UndistortImage(right_frame, 1);
-                    }
-                    */
-
-                    // Run the tracker on the undistorted frames.
-                    tracker.CreateMask(left_frame);
-                    tracker.CheckForActivity(adj_frame);
-                    tracker.CreateMask(right_frame);
-                    tracker.CheckForActivity(adj_frame);
+                    // Run the tracker_l on the undistorted frames.
+                    tracker_l.CreateMask(left_frame);
+                    tracker_l.CheckForActivity(adj_frame);
+                    tracker_r.CreateMask(right_frame);
+                    tracker_r.CheckForActivity(adj_frame);
 
                     // Write the concatenated undistorted frames.
                     cv::Mat res = ConcatenateMatrices(left_frame, right_frame);
-                    //imshow("res", res);
-                    //char c = waitKey(25);
-                    //if(c == 27) break;
+                    
+                    /*imshow("res", res);
+                    char c = waitKey(25);
+                    if(c == 27) break;*/
+                    
                     writer << res;
                 }
             }
@@ -208,9 +223,15 @@ void ProcessVideo(std::string file1, std::string file2)
             right_cap.release();
             cv::destroyAllWindows();
 
-            for(auto event : tracker.ActivityRange)
+            for(auto event : tracker_l.ActivityRange)
             {
-                ActivityEvent act(int(event.first), event.second.first, event.second.second > 0 ? event.second.second : currentFrame);\
+                ActivityEvent act(int(event.first), event.second.first, event.second.second > 0 ? event.second.second : currentFrame);
+                DE.AddObject(act.GetAsJSON());
+            }
+
+            for(auto event : tracker_r.ActivityRange)
+            {
+                ActivityEvent act(int(event.first), event.second.first, event.second.second > 0 ? event.second.second : currentFrame);
                 DE.AddObject(act.GetAsJSON());
             }
 
@@ -241,6 +262,8 @@ void ProcessVideo(std::string file1, std::string file2)
                     calib = nullptr;
                 }
             }
+
+            std::cout << "=== Finished Processing for \"" << file_name << "\"===\n";
         }
     }
 }
@@ -252,7 +275,7 @@ void HandleSignal(int signal)
     exit(0);
 }
 
-vector<string> GetVideosFromDir(string dir, vector<string> filters)
+std::vector<std::string> GetVideosFromDir(std::string dir, std::vector<std::string> filters)
 {
     vector<string> video_files;
     DIR* dp;
@@ -273,8 +296,8 @@ Mat ConcatenateMatrices(Mat& left_mat, Mat& right_mat)
     int rows = max(left_mat.rows, right_mat.rows);
     int cols = left_mat.cols + right_mat.cols;
 
-    Mat3b conc(rows, cols, Vec3b(0, 0, 0));
-    Mat3b res(rows, cols, Vec3b(0, 0, 0));
+    cv::Mat3b conc(rows, cols, Vec3b(0, 0, 0));
+    cv::Mat3b res(rows, cols, Vec3b(0, 0, 0));
 
     left_mat.copyTo(res(Rect(0, 0, left_mat.cols, left_mat.rows)));
     right_mat.copyTo(res(Rect(left_mat.cols, 0, right_mat.cols, right_mat.rows)));
@@ -307,6 +330,7 @@ void TriangulateSelectedPoints(Calibration*& calib)
 
         calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
         calib->ReadCalibration();
+        calib->TriangulatePoints();
     }
 }
 

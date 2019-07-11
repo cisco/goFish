@@ -8,6 +8,7 @@ Tracker::Tracker(Tracker::Settings s)
 {
     Config = s;
     bkgd_sub_ptr = cv::createBackgroundSubtractorKNN();
+    bIsActive = false;
     GetCascades();
 }
 
@@ -64,7 +65,7 @@ void Tracker::GetObjectContours(cv::Mat& frame)
         {
             cv::approxPolyDP(contours[i], prec_conts[i], 3, true);
             cv::Scalar colour = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-            cv::drawContours(frame, contours, i, colour, -1, 8, hierarchy, 0, cv::Point());
+            //cv::drawContours(frame, contours, i, colour, -1, 8, hierarchy, 0, cv::Point());
 
             cv::Rect bound_rect = cv::boundingRect(prec_conts[i]);
             cv::rectangle(frame, bound_rect.tl(), bound_rect.br(), colour, 2);
@@ -76,14 +77,22 @@ void Tracker::CheckForActivity(int& CurrentFrame)
 {
     if (!contours.empty())
     {
-        if(ActivityRange.find(ActivityRange.size()) == ActivityRange.end())
+        if(!bIsActive)
+        {
+            bIsActive = true;
+            std::cout << "*** Activity Event : " << ActivityRange.size() << std::endl;
             ActivityRange.insert(std::make_pair(ActivityRange.size()+1, std::make_pair(CurrentFrame, -1)));
+        }
     }
     else 
     {
-        if(ActivityRange.find(ActivityRange.size()) != ActivityRange.end())
-        if (ActivityRange.find(ActivityRange.size())->first > -1)
+        // FIXME: Event ends are not being detected after the first ending. This needs to be fixed.
+        if(ActivityRange[ActivityRange.size()].first != -1 && ActivityRange[ActivityRange.size()].second == -1 && bIsActive)
+        {
+            bIsActive = false;
             ActivityRange[ActivityRange.size()].second = CurrentFrame;
+            std::cout << "*** End Activity!\n";
+        }
     }
 }
 

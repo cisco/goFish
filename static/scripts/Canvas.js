@@ -4,10 +4,8 @@ class Toolkit
     {
         this.canvas         = $('#adjusted-video');
         this.mouse          = null;
-        this.left_rulers    = Array();
-        this.right_rulers   = Array();
-        this.lruler_index   = 0;
-        this.rruler_index   = 0;
+        this.left_rulers    = null;
+        this.right_rulers   = null;
         this.mode           = -1;
         this.toolButton     = null;
     }
@@ -33,12 +31,11 @@ class Toolkit
 
     UseTool()
     {
-        if(this.mouse != null)
+        if(this.mouse != null && this.canvas.position() != null)
         {
             if( (this.mouse.x >= this.canvas.position().left && this.mouse.x <= this.canvas.position().left + this.canvas.width()) &&
                 (this.mouse.y >= this.canvas.position().top && this.mouse.y <= this.canvas.position().top + this.canvas.height()))
             {
-                console.log("Using tool");
                 switch(this.mode)
                 {
                     case 0:
@@ -58,65 +55,32 @@ class Toolkit
 
     AddRuler()
     {
+        function PostResult(ruler, x_offset)
+        {
+            var line = ruler.line;
+            var sx = (line.start_point.x - x_offset);
+            var ex = (line.end_point.x - x_offset);
+            var data = "{ \"P0\" : {\"x\" :" + sx +", \"y\":"+line.start_point.y+"}, \"" + name+'1' +"\" : {\"x\" :" + ex + ", \"y\":" + line.end_point.y + "}}";
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/processing/right");
+            xhr.setRequestHeader("Content-Type", "application/json");                
+            xhr.send(data);
+        }
+
         if(this.mouse.x <= this.canvas.position().left + this.canvas.width()/2)
         {
-            if(this.left_rulers[this.lruler_index] == null) 
-                this.left_rulers.push(new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#FF1144"));
-            this.left_rulers[this.lruler_index].AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
-            if(this.left_rulers[this.lruler_index].point_2 != null)
-            {
-                /*
-                // Add diagnostic info to info panel.
-                {
-                    var text = "<dt>" + this.lruler_index + ": </dt>";
-                    text += "<dd>x1 = " + this.left_rulers[this.lruler_index].point_1.x + "</dd>";
-                    text += "<dd>y1 = " + Math.round(this.left_rulers[this.lruler_index].point_1.y) + "</dd>";
-                    text += "<dd>x2 = " + this.left_rulers[this.lruler_index].point_2.x + "</dd>";
-                    text += "<dd>y2 = " + Math.round(this.left_rulers[this.lruler_index].point_2.y) + "</dd>";
-                    text += "<dd>Length = " + this.left_rulers[this.lruler_index].line.Length() + "</dd>";
-                
-                    $("#ruler-info").append(text);
-                }
-                */
-
-                // Post the ruler info to the server to be processed.
-                {
-                    var line = this.left_rulers[this.lruler_index].line;
-                    var name = 'P'+this.lruler_index;
-                    var data = "{ \"" + name + '0' + "\" : {\"x\" :" + line.start_point.x +", \"y\":"+line.start_point.y+"}, \"" + name+'1' +"\" : {\"x\" :" + line.end_point.x + ", \"y\":" + line.end_point.y + "}}";
-                    
-                    var xhr = new XMLHttpRequest();
-                    xhr.open("POST", "/processing/left");
-                    xhr.setRequestHeader("Content-Type", "application/json");                
-                    xhr.send(data);
-                }
-
-                this.lruler_index++;
-            }
+            this.left_rulers = (new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#FF1144"));
+            this.left_rulers.AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
+            if(this.left_rulers.point_2 != null)
+                PostResult(this.left_rulers, 0);
         }
         else
         {
-            if(this.right_rulers[this.rruler_index] == null) 
-                this.right_rulers.push(new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#40e0d0"));
-            this.right_rulers[this.rruler_index].AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
-            if(this.right_rulers[this.rruler_index].point_2 != null)
-            {
-                // Post the ruler info to the server to be processed.
-                {
-                    var line = this.right_rulers[this.rruler_index].line;
-                    var name = 'P'+this.rruler_index;
-                    var sx = (line.start_point.x - 533);
-                    var ex = (line.end_point.x - 533);
-                    var data = "{ \"" + name + '0' + "\" : {\"x\" :" + sx +", \"y\":"+line.start_point.y+"}, \"" + name+'1' +"\" : {\"x\" :" + ex + ", \"y\":" + line.end_point.y + "}}";
-                    
-                    var xhr = new XMLHttpRequest();
-                    xhr.open("POST", "/processing/right");
-                    xhr.setRequestHeader("Content-Type", "application/json");                
-                    xhr.send(data);
-                }
-
-                this.rruler_index++;
-            }
+            this.right_rulers = (new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#40e0d0"));
+            this.right_rulers.AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
+            if(this.right_rulers.point_2 != null)
+                PostResult(this.right_rulers, this.canvas.width / 2);
         }
     }
 }

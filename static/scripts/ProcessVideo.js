@@ -14,12 +14,13 @@ class VideoHandler
             this.video.name     = "selected";
             this.video.maxFrame = Math.ceil(this.video.duration * FRAMERATE);
 
+            var self = this;
             this.video.addEventListener("ended", function(){
                 if($("#play-pause").hasClass("active"))
                 {
                     $("#play-pause").removeClass("active");
                     $("#play-pause").children(".material-icons").html("&#xe037;");
-                    pause();
+                    self.pause();
                 }
             });
         }
@@ -56,7 +57,10 @@ class VideoHandler
                 ctx.scale(10, 1);
                 scrubber.height = 40;
 
-                scrubber.value = Math.round(this.video.currentTime * FRAMERATE);
+                var newTime = parseFloat(scrubber.value / FRAMERATE);
+                if(scrubber.value <= Math.round(this.video.currentTime * FRAMERATE))
+                    scrubber.value = Math.round(this.video.currentTime * FRAMERATE);
+                //else this.adjustVideo(newTime - Number(this.video.currentTime));
                 document.getElementById("adjusted-time").innerHTML = Math.round(parseFloat(scrubber.value));
             }
         }
@@ -76,15 +80,16 @@ class VideoHandler
             this.ended = false;
 
             var scrubber = document.getElementById("event-time-bar");
-            scrubber.value = this.video.currentTime * FRAMERATE;
+            scrubber.value = Number(this.video.currentTime) * FRAMERATE;
             document.getElementById("adjusted-time").innerHTML = Math.ceil(parseFloat(scrubber.value));
         }
     }
 
     adjustVideo(diff)
     {
-        this.video.currentTime += diff / FRAMERATE;
-        this.video.currentTime = Math.max(0, Math.min(this.video.currentTime, this.video.duration));
+        if (this.video.currentTime instanceof Number && diff instanceof Number)
+            setTimeout(function(){this.video.currentTime += (Number(diff) / FRAMERATE)}, 1000);
+        this.video.currentTime = Number(Math.max(0, Math.min(this.video.currentTime, this.video.duration)));
     }
 }
 
@@ -92,7 +97,7 @@ class JsonHandler
 {
     constructor(tag, video)
     {
-        this.handle = tag != null || tag != "" ? JSON.parse(tag) : null;
+        this.handle = tag != null || (tag != "" && tag != "{}") ? JSON.parse(atob(tag)) : null;
         this.tag = tag;
         this.video = video;
         this.events = []
@@ -122,7 +127,7 @@ class JsonHandler
             function Activity(e){return e["Event_Activity_"+id];}
             var event = this.handle.DetectedEvents.find(Activity) != null ? this.handle.DetectedEvents.find(Activity)["Event_Activity_"+id] : null;
             if(event != null)
-                this.events.push(new Event(((event.frame_start )/ (this.video.maxFrame)), ((event.frame_end) / (this.video.maxFrame))));
+                this.events.push(new Event(event.frame_start / this.video.maxFrame, event.frame_end / this.video.maxFrame));
         }
     }
 }
@@ -175,14 +180,14 @@ class EventHandler
 
             if(this.events[this.event_index] != null)
             {
-                console.log(this.events);
+                //console.log(this.events);
                 if(this.events[this.event_index].frame_start * this.canvas.width <= slider && slider <= this.events[this.event_index].frame_end * this.canvas.width);
                 else if (slider / this.canvas.width > this.events[this.event_index].frame_end)
                     if(this.events[this.event_index+1] != null && this.event_index + 1 < this.events.length)
                     {
                         scrubber.value = (this.events[this.event_index+1].frame_start * scrubber.max);
                         console.log("Skipping to next Event");
-                        this.event_index++;
+                        this.event_index = (this.event_index + 1) % this.events.length;
                     }
             }
         }
