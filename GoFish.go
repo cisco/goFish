@@ -51,6 +51,11 @@ func main() {
 	goFish.StartServer()
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// GoFish
+///////////////////////////////////////////////////////////////////////////////
+
+// GoFish : The main object
 type GoFish struct {
 	server *Server
 	box    *BoxSDK
@@ -128,7 +133,8 @@ func (goFish *GoFish) StartServer() {
 	os.Exit(1)
 }
 
-// ProcessAndUploadVideos : Handles processing videos and uploading the results to Box, then cleaning up the server-side files.
+// ProcessAndUploadVideos : Handles processing videos and uploading the results
+// to Box, then cleaning up the server-side files.
 func (goFish *GoFish) ProcessAndUploadVideos(args ...string) {
 	if len(args) > 0 {
 		for {
@@ -218,45 +224,20 @@ func (goFish *GoFish) RunProcess(instr string, args ...string) {
 	}
 }
 
-// CreateDatabase : Handles the creation of and/or connection to a database.
-func CreateDatabase(name string) *Database {
-	addr := os.Getenv("DB_PORT")
-	port, _ := strconv.Atoi(addr)
-	db := NewDatabase(port)
-
-	db.ConnectDB(os.Getenv("URL")+addr, "root", "findingfish")
-	db.CreateDB(name)
-	return db
-}
-
-// IsDirEmpty : Checks to see if there are any files in a directory.
-func IsDirEmpty(name string) (bool, int, error) {
-	dir, err := os.Open(name)
-	if err != nil {
-		return false, 0, err
-	}
-	defer dir.Close()
-
-	files, err := dir.Readdir(3)
-
-	if err == io.EOF || (len(files) == 1 && files[0].Name() == ".DS_Store") {
-		return true, 0, nil
-	}
-
-	return false, len(files) - 1, err
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Client-side functions.
+///////////////////////////////////////////////////////////////////////////////
 
-// VideoInfo : Structure that holds information about a video, which is passed to HTML.
+// VideoInfo : Structure that holds information about a video, which is passed
+// to HTML.
 type VideoInfo struct {
 	Name string
 	Tag  string
 	JSON string
 }
 
-// HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload the files.
+// HandleVideoHTML : Returns the names of videos selected in browser. If no
+// files were selected, then try to upload the files.
 func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
 	if r.Method == "POST" || goFish.video != "" {
 		decoder := json.NewDecoder(r.Body)
@@ -349,12 +330,17 @@ func (goFish *GoFish) HandleCalibrateUpload(r *http.Request) interface{} {
 		formFields[1] = "right-camera-files"
 		saveLocations[0] = "static/calibrate/" + r.FormValue("left-camera") + "/"
 		saveLocations[1] = "static/calibrate/" + r.FormValue("right-camera") + "/"
-		goFish.server.UploadFiles(r, formFields, saveLocations, FileFormat{t.Format("2006-01-02-030405"), ".jpg", 10 << 20, false}, "")
+		goFish.server.UploadFiles(r, formFields, saveLocations,
+			FileFormat{t.Format("2006-01-02-030405"),
+				".jpg",
+				10 << 20, false},
+			"")
 	}
 	return struct{}{}
 }
 
-// HandleRulerHTML : Saves points gotten in browser to a YAML file to be read by an OpenCV program to triangulate the points.
+// HandleRulerHTML : Saves points gotten in browser to a YAML file to be read
+// by an OpenCV program to triangulate the points.
 func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)
@@ -363,10 +349,14 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 
 		// Try to open the file. If it doesn't exist, create it, and write a default header.
 		header := []byte("")
-		file, err := os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_APPEND|os.O_WRONLY, 0600)
+		file, err := os.OpenFile(
+			"config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml",
+			os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			log.Println(err)
-			file, err = os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_CREATE|os.O_WRONLY, 0600)
+			file, err = os.OpenFile(
+				"config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml",
+				os.O_CREATE|os.O_WRONLY, 0600)
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -415,7 +405,8 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 	}{goFish.GetWorldPoints}
 }
 
-// GetFishInfo : Gets all the info required to fill out the info form for identifying animals.
+// GetFishInfo : Gets all the info required to fill out the info form for
+// identifying animals.
 func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
 	if goFish.server.DB.db != nil {
 
@@ -472,7 +463,8 @@ func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
 	return nil
 }
 
-// GetWorldPoints : Retrieves world points and sends them to the client to be measured.
+// GetWorldPoints : Retrieves world points and sends them to the client to be
+//  measured.
 func (goFish *GoFish) GetWorldPoints(r *http.Request) interface{} {
 	file, err := ioutil.ReadFile("config/ObjectPoints.yaml")
 	if err != nil {
@@ -485,4 +477,36 @@ func (goFish *GoFish) GetWorldPoints(r *http.Request) interface{} {
 
 	pointArr := js["object_points"]
 	return struct{ Points [][]float64 }{pointArr}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Helper methods
+///////////////////////////////////////////////////////////////////////////////
+
+// CreateDatabase : Handles the creation of and/or connection to a database.
+func CreateDatabase(name string) *Database {
+	addr := os.Getenv("DB_PORT")
+	port, _ := strconv.Atoi(addr)
+	db := NewDatabase(port)
+
+	db.ConnectDB(os.Getenv("URL")+addr, "root", "findingfish")
+	db.CreateDB(name)
+	return db
+}
+
+// IsDirEmpty : Checks to see if there are any files in a directory.
+func IsDirEmpty(name string) (bool, int, error) {
+	dir, err := os.Open(name)
+	if err != nil {
+		return false, 0, err
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(3)
+
+	if err == io.EOF || (len(files) == 1 && files[0].Name() == ".DS_Store") {
+		return true, 0, nil
+	}
+
+	return false, len(files) - 1, err
 }
