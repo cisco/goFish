@@ -111,6 +111,7 @@ class VideoHandler
 
     /// Adjusts the video's current time by the difference converted from
     /// frames.
+    /// \param[in] diff The difference in frames to adjust the video by.
     adjustVideo(diff)
     {
         var self = this;
@@ -128,6 +129,8 @@ class VideoHandler
 class JsonHandler
 {
     /// Creates the new object with the collected JSON data and tag.
+    /// \param[in] tag The video tag name.
+    /// \param[in, out] video The video to reference.
     constructor(tag, video)
     {
         this.handle = tag != null || (tag != "" && tag != "{}") ? JSON.parse(atob(tag)) : null;
@@ -156,6 +159,7 @@ class JsonHandler
 
     /// Finds all activity events and returns them as an array of formatted
     /// event objects.
+    /// \param[in] id The ID of the event to choose from the array.
     Event_Activity(id)
     {
         if(this.handle != null)
@@ -188,6 +192,9 @@ class EventHandler
     }
 
     /// Defines how to draw a line on the scrubber bar canvas.
+    /// \param[in] start The starting frame of the line area.
+    /// \param[in] end The ending frame of the line area.
+    /// \param[in] colour The colour to draw the line.
     drawLine(start, end, colour)
     {
         if(this.canvas != null)
@@ -241,6 +248,8 @@ class EventHandler
     }
 
     /// Adds an event to the array of events.
+    /// \param[in] start The starting frame of the event.
+    /// \param[in] end The ending frame of the event.
     addEvent(start, end)
     {
         this.events.push(new Event(start, end));
@@ -254,6 +263,8 @@ class EventHandler
 class Event
 {
     /// Constructs an event within a given start and end range.
+    /// \param[in] start The starting frame of the event.
+    /// \param[in] end The ending frame of the event.
     constructor(start, end)
     {
         this.frame_start = start;
