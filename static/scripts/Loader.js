@@ -1,6 +1,13 @@
-////////////////////////////////////////////////////////////////////////////////////////////
+/// \author Tomas Rigaux
+/// \date May 16, 2019
+///
+/// \brief Loader.js handles most of the jQuery related commands that help keep
+/// the page Asynchronous with loading in new information from the server-side
+/// Go template code.
+
+///////////////////////////////////////////////////////////////////////////////
 // Setup global variables
-////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 let videoHandler = new VideoHandler();
 let eventHandler = new EventHandler();
 let toolkit      = new Toolkit();
@@ -8,12 +15,11 @@ let toolkit      = new Toolkit();
 var timer   = null;
 var playing = false;
 
-////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Loading Methods
-////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
-/// Document Ready
-/// \brief Run when the document is first loaded.
+/// Run when the document is first loaded.
 $(function(){
     // Init jQuery events.
     {
@@ -40,8 +46,7 @@ $(function(){
     }
 });
 
-/// AJAX Complete
-/// \brief Runs after every completed AJAX request.
+/// Runs after every completed AJAX request.
 $(document).ajaxComplete(function(){
     $(".file-item").on("click", function(e){
         e.preventDefault();
@@ -51,12 +56,12 @@ $(document).ajaxComplete(function(){
 });
 
 
-////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Helper Loading methods
-////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
-/// LoadAll
-/// \brief Loads all necessary video processing objects with data obtained from the server.
+/// Loads all necessary video processing objects with data obtained from the 
+/// server.
 function LoadAll()
 {
     // Reinitialize variables.
@@ -73,26 +78,26 @@ function LoadAll()
 
     // Draw events on the scrubber bar.
     eventHandler.draw();
+    HandleTools();
 }
 
-/// Refresh
-/// \brief Refreshes specific elements on the oage to update them with new content.
+/// Refreshes specific elements on the oage to update them with new content.
 function Refresh(e){
     e.preventDefault();
 
     // Adjust main canvas for correct aspect ratio.
     {
         $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
-        $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
+        $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width")/8*3));
     }
 
     // Click Events
     {
         $("#event-time-bar").on("click", function(e){
-            var bar_offset = e.clientX - $(this).position().left;
+            var barOffset = e.clientX - $(this).position().left;
             var scrubber = document.getElementById("event-time-bar");
-            var rel_pos = Math.round( (bar_offset / $(this).width()) * scrubber.max );
-            scrubber.value = rel_pos;
+            var relPos = Math.round((barOffset/$(this).width())*scrubber.max);
+            scrubber.value = relPos;
             videoHandler.video.currentTime = scrubber.value / FRAMERATE;
             setTimeout(Redraw, 300);
         });
@@ -136,8 +141,7 @@ function Refresh(e){
     setTimeout(LoadAll, 1000);
 }
 
-/// SubmitMultipartForms
-/// \brief Submits multipart file forms using AJAX.
+/// Submits multipart file forms using AJAX.
 function SubmitMultipartForms(forms)
 {
     $(forms).on("submit", function(e){
@@ -161,8 +165,7 @@ function SubmitMultipartForms(forms)
     });
 }
 
-/// HandleTools
-/// \brief Sets up functionality for the toolbar.
+/// Sets up functionality for the toolbar.
 function HandleTools()
 {
     $(document).mousemove(function(e){
@@ -178,8 +181,7 @@ function HandleTools()
     $("#info-panel").draggable();
 }
 
-/// Redraw
-/// \brief Redraws the main video and scrubber bar canvases.
+/// Redraws the main video and scrubber bar canvases.
 function Redraw()
 {
     videoHandler.draw();
@@ -188,9 +190,11 @@ function Redraw()
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Video Control methods
-////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+/// Starts playing all video handling elements.
 function Play()
 {
     if(videoHandler.video != null)
@@ -210,6 +214,7 @@ function Play()
     }
 }
 
+/// Pauses all video handling elements.
 function Pause()
 {
     if(videoHandler.video != null)
@@ -219,6 +224,7 @@ function Pause()
     }
 }
 
+/// Seeks back 1 second of the video.
 function SeekBack()
 {
     if(videoHandler.video != null)
@@ -232,6 +238,7 @@ function SeekBack()
     }
 }
 
+/// Seeks forward 1 second of the video.
 function SeekForward()
 {
     if(videoHandler.video != null)
