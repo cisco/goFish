@@ -34,7 +34,7 @@
             <div class="nav-item"><i class="material-icons">&#xe1db;</i>&emsp;Processed Videos</div>
             <div class="dropdown-content files" id="files">
             {{if .Files}}
-                {{range $i , $f := .Files}}
+                {{range $i , $f := .Files.Names}}
                     <div class="file-item">{{ $f }}</div>
                 {{end}}
             {{else}}

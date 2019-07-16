@@ -76,25 +76,14 @@ func (goFish *GoFish) StartServer() {
 
 	//goFish.server.DB = CreateDatabase("fishtest")
 
-	items, err := goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 1000, 0)
-
-	if err != nil {
-		log.Println(err)
-	}
-
-	var fileNames []string
-	for _, v := range items.Entries {
-		fileNames = append(fileNames, v.Name)
-	}
-
 	goFish.server.SetServeInfo(struct {
 		PageInfo  func(*http.Request) interface{}
 		PointInfo func(*http.Request) interface{}
-		Files     []string
+		Files     func(*http.Request) interface{}
 	}{
 		goFish.HandleVideoHTML,
 		goFish.GetWorldPoints,
-		fileNames,
+		goFish.GetFilenames,
 	})
 
 	goFish.server.BuildHTMLTemplate("static/videos.html", "/", goFish.server.ServeInfo)
@@ -477,6 +466,22 @@ func (goFish *GoFish) GetWorldPoints(r *http.Request) interface{} {
 
 	pointArr := js["object_points"]
 	return struct{ Points [][]float64 }{pointArr}
+}
+
+// GetFilenames : Gets all processed video files and returns them as a list.
+func (goFish *GoFish) GetFilenames(r *http.Request) interface{} {
+	items, err := goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 1000, 0)
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	var fileNames []string
+	for _, v := range items.Entries {
+		fileNames = append(fileNames, v.Name)
+	}
+
+	return struct{ Names []string }{fileNames}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
