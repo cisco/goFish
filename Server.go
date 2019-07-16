@@ -77,9 +77,11 @@ func (s *Server) SetServeInfo(info interface{}) {
 func (s *Server) ServeInfo(r *http.Request) interface{} {
 	m := structs.Map(s.Info)
 	for i, v := range m {
-		if reflect.TypeOf(v).Kind() == reflect.Func {
-			if v.(func(*http.Request) interface{}) != nil {
-				m[i] = v.(func(*http.Request) interface{})(r)
+		if v != nil {
+			if reflect.TypeOf(v).Kind() == reflect.Func {
+				if v.(func(*http.Request) interface{}) != nil {
+					m[i] = v.(func(*http.Request) interface{})(r)
+				}
 			}
 		}
 	}

@@ -48,6 +48,7 @@ type AccessResponse struct {
 	TokenType    string        `json:"token_type"`
 }
 
+// FileObject : A Box File object.
 type FileObject struct {
 	Type           string         `json:"type"`
 	ID             string         `json:"id"`
@@ -61,14 +62,15 @@ type FileObject struct {
 	PathCollection PathCollection `json:"path_collection"`
 	CreatedAt      string         `json:"created_at"`
 	ModifiedAt     string         `json:"modified_at"`
-	CreatedBy      CreatedBy      `json:"created_by"`
-	ModifiedBy     ModifiedBy     `json:"modified_by"`
-	OwnedBy        OwnedBy        `json:"owned_by"`
+	CreatedBy      User           `json:"created_by"`
+	ModifiedBy     User           `json:"modified_by"`
+	OwnedBy        User           `json:"owned_by"`
 	SharedLink     SharedLink     `json:"shared_link"`
 	Parent         Parent         `json:"parent"`
 	ItemStatus     string         `json:"item_status"`
 }
 
+// FolderObject : A Box Folder object.
 type FolderObject struct {
 	Type              string            `json:"type"`
 	ID                string            `json:"id"`
@@ -80,9 +82,9 @@ type FolderObject struct {
 	Description       string            `json:"description"`
 	Size              int               `json:"size"`
 	PathCollection    PathCollection    `json:"path_collection,omitempty"`
-	CreatedBy         CreatedBy         `json:"created_by,omitempty"`
-	ModifiedBy        ModifiedBy        `json:"modified_by,omitempty"`
-	OwnedBy           OwnedBy           `json:"owned_by,omitempty"`
+	CreatedBy         User              `json:"created_by,omitempty"`
+	ModifiedBy        User              `json:"modified_by,omitempty"`
+	OwnedBy           User              `json:"owned_by,omitempty"`
 	SharedLink        SharedLink        `json:"shared_link,omitempty"`
 	FolderUploadEmail FolderUploadEmail `json:"folder_upload_email,omitempty"`
 	Parent            Parent            `json:"parent,omitempty"`
@@ -91,12 +93,14 @@ type FolderObject struct {
 	Tags              []string          `json:"tags"`
 }
 
+// FileVersion : Contains version information of a FileObject.
 type FileVersion struct {
 	Type string `json:"type"`
 	ID   string `json:"id"`
 	Sha1 string `json:"sha1"`
 }
 
+// Entries : A more in-depth response containing more information about box objects.
 type Entries struct {
 	EntriesMini
 	Sha1              string         `json:"sha1 "`
@@ -109,14 +113,15 @@ type Entries struct {
 	PurgedAt          interface{}    `json:"purged_at,omitempty"`
 	ContentCreatedAt  string         `json:"content_created_at"`
 	ContentModifiedAt string         `json:"content_modified_at"`
-	CreatedBy         CreatedBy      `json:"created_by,omitempty"`
-	ModifiedBy        ModifiedBy     `json:"modified_by,omitempty"`
-	OwnedBy           OwnedBy        `json:"owned_by,omitempty"`
+	CreatedBy         User           `json:"created_by,omitempty"`
+	ModifiedBy        User           `json:"modified_by,omitempty"`
+	OwnedBy           User           `json:"owned_by,omitempty"`
 	SharedLink        SharedLink     `json:"shared_link,omitempty"`
 	Parent            Parent         `json:"parent,omitempty"`
 	ItemStatus        string         `json:"item_status"`
 }
 
+// EntriesMini : Basic structure for response carrying info about box objects.
 type EntriesMini struct {
 	Type       string      `json:"type"`
 	ID         string      `json:"id"`
@@ -125,37 +130,27 @@ type EntriesMini struct {
 	Name       string      `json:"name"`
 }
 
+// PathCollection : The total amount of entries in a given path, as well as the entries themselves.
 type PathCollection struct {
 	TotalCount int       `json:"total_count"`
 	Entries    []Entries `json:"entries"`
 }
 
-type CreatedBy struct {
+// User : Contains information about a Box user.
+type User struct {
 	Type  string `json:"type"`
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Login string `json:"login"`
 }
 
-type ModifiedBy struct {
-	Type  string `json:"type"`
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Login string `json:"login"`
-}
-
-type OwnedBy struct {
-	Type  string `json:"type"`
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Login string `json:"login"`
-}
-
+// Permissions : Flags for downloaded files.
 type Permissions struct {
 	CanDownload bool `json:"can_download"`
 	CanPreview  bool `json:"can_preview"`
 }
 
+// SharedLink : A shared link to a downloadable file.
 type SharedLink struct {
 	URL               string      `json:"url"`
 	DownloadURL       interface{} `json:"download_url,omitempty"`
@@ -168,11 +163,13 @@ type SharedLink struct {
 	Permissions       Permissions `json:"permissions,omitempty"`
 }
 
+// FolderUploadEmail : Access level and email address of upload folder.
 type FolderUploadEmail struct {
 	Access string `json:"access"`
 	Email  string `json:"email"`
 }
 
+// Parent : Parent folder of a returned box object.
 type Parent struct {
 	Type       string      `json:"type"`
 	ID         string      `json:"id"`
@@ -181,6 +178,7 @@ type Parent struct {
 	Name       string      `json:"name"`
 }
 
+// ItemCollection : Total count up to the limit of the number of entries in a folder, as well as the entries themselves.
 type ItemCollection struct {
 	TotalCount int           `json:"total_count"`
 	Entries    []EntriesMini `json:"entries"`
@@ -188,11 +186,13 @@ type ItemCollection struct {
 	Limit      int           `json:"limit"`
 }
 
+// Order : Defines how to sort objects.
 type Order struct {
 	By        string `json:"by"`
 	Direction string `json:"direction"`
 }
 
+// EmbeddedFile : An HTML embeddable file.
 type EmbeddedFile struct {
 	Type              string `json:"type"`
 	ID                string `json:"id"`

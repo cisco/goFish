@@ -3,8 +3,6 @@ package main
 import (
 	"database/sql"
 	"log"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 // Database : A structure for holding relevant DB information.
@@ -59,9 +57,8 @@ func (db_ptr *Database) Execute(query string, args ...interface{}) (sql.Result, 
 
 // Query : Wrapper function for querying SQL.
 func (db_ptr *Database) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	_, err := db_ptr.db.Query("USE " + db_ptr.name)
+	err := db_ptr.db.Ping()
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	return db_ptr.db.Query(query)

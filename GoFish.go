@@ -12,10 +12,13 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-yaml/yaml"
 )
 
 func main() {
@@ -40,7 +43,7 @@ func main() {
 	os.Setenv("calibImgFolder", "81405876091")
 	os.Setenv("calibResultFolder", "81406022555")
 
-	goFish := &GoFish{NewServer(), NewBoxSDK("database/211850911_ojaojsfr_config.json")}
+	goFish := &GoFish{NewServer(), NewBoxSDK("database/211850911_ojaojsfr_config.json"), ""}
 
 	go goFish.ProcessAndUploadVideos("./static/videos/")
 	go goFish.CalibrateCameras()
@@ -51,6 +54,7 @@ func main() {
 type GoFish struct {
 	server *Server
 	box    *BoxSDK
+	video  string
 }
 
 // StartServer : Starts up an HTTP server.
@@ -65,7 +69,7 @@ func (goFish *GoFish) StartServer() {
 		addr = ":80"
 	}
 
-	goFish.server.DB = CreateDatabase("fishTest")
+	//goFish.server.DB = CreateDatabase("fishtest")
 
 	items, err := goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 1000, 0)
 
@@ -79,12 +83,12 @@ func (goFish *GoFish) StartServer() {
 	}
 
 	goFish.server.SetServeInfo(struct {
-		PageInfo func(*http.Request) interface{}
-		DBInfo   func(*http.Request) interface{}
-		Files    []string
+		PageInfo  func(*http.Request) interface{}
+		PointInfo func(*http.Request) interface{}
+		Files     []string
 	}{
 		goFish.HandleVideoHTML,
-		nil, //goFish.GetFishInfo,
+		goFish.GetWorldPoints,
 		fileNames,
 	})
 
@@ -94,8 +98,8 @@ func (goFish *GoFish) StartServer() {
 	goFish.server.BuildHTMLTemplate("static/videos.html", "/processing/", goFish.HandleRulerHTML)
 	goFish.server.Box = goFish.box
 
-	log.Println(goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 10, 0))
-	log.Println(goFish.box.GetFolderItems("81405395430", 10, 0))
+	folder, _ := goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 10, 0)
+	log.Println(folder)
 
 	// TODO: Temporary, this shouldn't stay.
 	/*
@@ -103,7 +107,6 @@ func (goFish *GoFish) StartServer() {
 			goFish.box.DeleteFile(v.ID, v.Etag)
 		}
 	*/
-
 	handler := &http.Server{Addr: addr, Handler: goFish.server}
 
 	go func() {
@@ -255,36 +258,47 @@ type VideoInfo struct {
 
 // HandleVideoHTML : Returns the names of videos selected in browser. If no files were selected, then try to upload the files.
 func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
-	if r.Method == "POST" {
+	if r.Method == "POST" || goFish.video != "" {
 		decoder := json.NewDecoder(r.Body)
 		var d interface{}
 		decoder.Decode(&d)
 
-		videoName := d.(map[string]interface{})["file"].(string)
-
-		if videoName == "" {
-			return struct{ VideosLoaded bool }{false}
-		}
-		log.Println(" > Selecting video:" + videoName)
-
-		// If file isn't already on the server, get it from box.
-		_, err := os.Open("static/temp/" + videoName)
-		if err != nil {
-			boxSDK := NewBoxSDK("database/211850911_ojaojsfr_config.json")
-			items, err := boxSDK.GetFolderItems(os.Getenv("procVidFolder"), 1000, 0)
-
-			var fileID string
-			for _, v := range items.Entries {
-				if v.Name == videoName {
-					fileID = v.ID
-					break
-				}
+		var videoName string
+		if d != nil {
+			if reflect.TypeOf(d).Kind() == reflect.Map {
+				videoName = d.(map[string]interface{})["file"].(string)
+			} else {
+				videoName = goFish.video
 			}
+		}
 
-			err = boxSDK.DownloadFile(fileID, "static/temp/")
+		if videoName == "" && goFish.video == "" {
+			return struct{ VideosLoaded bool }{false}
+		} else if videoName == "" {
+			videoName = goFish.video
+		}
+
+		if videoName != goFish.video {
+			log.Println(" > Selecting video:" + videoName)
+
+			// If file isn't already on the server, get it from box.
+			_, err := os.Open("static/temp/" + videoName)
 			if err != nil {
-				log.Println(err)
-				return struct{ VideosLoaded bool }{false}
+				items, err := goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 1000, 0)
+
+				var fileID string
+				for _, v := range items.Entries {
+					if v.Name == videoName {
+						fileID = v.ID
+						break
+					}
+				}
+
+				err = goFish.box.DownloadFile(fileID, "static/temp/")
+				if err != nil {
+					log.Println(err)
+					return struct{ VideosLoaded bool }{false}
+				}
 			}
 		}
 
@@ -295,14 +309,20 @@ func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
 			videoJSON = string(file)
 		}
 
+		if videoName != goFish.video {
+			goFish.video = videoName
+		}
+
 		return struct {
 			VideosLoaded bool
 			VideoInfo    VideoInfo
 		}{
-			videoName != "",
+			goFish.video != "",
 			VideoInfo{videoName, tag, base64.URLEncoding.EncodeToString([]byte(videoJSON))},
 		}
+
 	}
+
 	return struct{ VideosLoaded bool }{false}
 }
 
@@ -342,7 +362,7 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 		decoder.Decode(&d)
 
 		// Try to open the file. If it doesn't exist, create it, and write a default header.
-		header := []byte("%YAML:1.0\n---")
+		header := []byte("")
 		file, err := os.OpenFile("config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml", os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			log.Println(err)
@@ -366,27 +386,33 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 		outVector := ""
 		for k, v := range d.(map[string]interface{}) {
 			keys := make([]string, 0, len(v.(map[string]interface{})))
-			for k := range v.(map[string]interface{}) {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-			m := v.(map[string]interface{})
-			outVector += "\n\u0020\u0020\u0020" + k + ": [ "
-			for i, k := range keys {
-				outVector += fmt.Sprintf("%.3f", (m[k].(float64)))
-				if i != len(keys)-1 {
-					outVector += ", "
+			if v != nil {
+				for k := range v.(map[string]interface{}) {
+					keys = append(keys, k)
 				}
+				sort.Strings(keys)
+				m := v.(map[string]interface{})
+				outVector += "\n\u0020\u0020\u0020" + k + ": [ "
+				for i, k := range keys {
+					outVector += fmt.Sprintf("%.6f", (m[k].(float64)))
+					if i != len(keys)-1 {
+						outVector += ", "
+					}
+				}
+				outVector += "]\u0020\u0020\u0020"
 			}
-			outVector += " ]"
 		}
 		outVector = strings.TrimRight(outVector, ",")
 		outVector += ""
 
-		file.Write([]byte(outVector))
+		file.WriteAt([]byte(outVector), 24)
+
+		goFish.RunProcess("./FishFinder", "TRIANGULATE")
 
 	}
-	return struct{}{}
+	return struct {
+		PointInfo func(r *http.Request) interface{}
+	}{goFish.GetWorldPoints}
 }
 
 // GetFishInfo : Gets all the info required to fill out the info form for identifying animals.
@@ -444,4 +470,19 @@ func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
 		}
 	}
 	return nil
+}
+
+// GetWorldPoints : Retrieves world points and sends them to the client to be measured.
+func (goFish *GoFish) GetWorldPoints(r *http.Request) interface{} {
+	file, err := ioutil.ReadFile("config/ObjectPoints.yaml")
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	var js map[string][][]float64
+	yaml.Unmarshal(file[14:], &js)
+
+	pointArr := js["object_points"]
+	return struct{ Points [][]float64 }{pointArr}
 }
