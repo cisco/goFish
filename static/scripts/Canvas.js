@@ -25,6 +25,8 @@ class Toolkit
     }
 
     /// Sets which tool to use via a tool index.
+    /// \param[in] mode The index of the tool to bxe used.
+    /// \param[in, out] button The button object which called this.
     SetMode(mode, button)
     {
         if(this.mode != -1 && this.mode == mode)
@@ -79,8 +81,8 @@ class Toolkit
         }
     }
 
-    /// Adds a new ruler to the canvas. If the mouse is to the left, it creates a left ruler.
-    /// If it is on the right, a right ruler is created.
+    /// Adds a new ruler to the canvas. If the mouse is to the left, it creates
+    /// a left ruler. If it is on the right, a right ruler is created.
     AddRuler()
     {
         // TODO: Refactor this and in GoFish.go to respectively submit and receive both rulers simultaneously.
@@ -141,6 +143,8 @@ class Toolkit
 class Mouse
 {
     /// Stores the mouse at a given origin.
+    /// \param[in] x The x coordinate of the cursor.
+    /// \param[in] y The y coordinate of the cursor.
     constructor(x, y)
     {
         this.x = x;
@@ -158,7 +162,11 @@ class Mouse
 ///        points and the line between them.
 class Ruler
 {
-    /// Constructor for the beginning point of the ruler. Also defines the colour of the rendered ruler.
+    /// Constructor for the beginning point of the ruler. Also defines the 
+    /// colour of the rendered ruler.
+    /// \param[in] x The x coordinate of the origin of the ruler.
+    /// \param[in] y The y coordinate of the origin of the ruler.
+    /// \param[in] colour The colour to render the points and line of the ruler.
     constructor(x, y, colour="#0011FF")
     {
         this.point_1 = null;
@@ -168,6 +176,8 @@ class Ruler
     }
 
     /// Adds a new point for the ruler.
+    /// \param[in] x The x coordinate of the new point.
+    /// \param[in] y The y coordinate of the new point.
     AddPoint(x, y)
     {
         if(this.point_1 != null)
@@ -183,6 +193,7 @@ class Ruler
     }
 
     /// Draws the endpoints and line to the canvas.
+    /// \param[in, out] canvas The canvas on which to draw the ruler.
     Render(canvas)
     {
         var context = canvas.getContext('2d');
@@ -208,6 +219,7 @@ class RenderObject
     constructor() {}
 
     /// Base super class render method.
+    /// \param[in, out] canvas The canvas on which to render the object.
     Render(canvas) {}
 }
 
@@ -217,6 +229,8 @@ class RenderObject
 class Point extends RenderObject
 {
     /// Constructor for the origin and radius of the point.
+    /// \param[in] x The x coordinate of the point.
+    /// \param[in] y The y coordinate of the point.
     constructor(x, y, r)
     {
         super();
@@ -227,6 +241,7 @@ class Point extends RenderObject
     }
 
     /// Draws the point to the canvas.
+    /// \param[in, out] canvas The canvas on which to render the point.
     Render(canvas)
     {
         var context = canvas.getContext("2d");
@@ -243,6 +258,8 @@ class Point extends RenderObject
 class Line extends RenderObject
 {
     /// Default constructor for initializing all member variables.
+    /// \param[in, out] p1 The start point for the line.
+    /// \param[in, out] p2 The end poijt for the line.
     constructor(p1, p2)
     {
         super();
@@ -251,6 +268,7 @@ class Line extends RenderObject
     }
 
     /// Renders both endpoints and  the line between them.
+    /// \param[in, out] canvas The canvas on which to render the line.
     Render(canvas)
     {
         if(this.start_point != null && this.end_point != null)

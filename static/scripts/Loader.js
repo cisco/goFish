@@ -82,6 +82,7 @@ function LoadAll()
 }
 
 /// Refreshes specific elements on the oage to update them with new content.
+/// \param [in] e The page event object.
 function Refresh(e){
     e.preventDefault();
 
@@ -142,6 +143,7 @@ function Refresh(e){
 }
 
 /// Submits multipart file forms using AJAX.
+/// \param[in] forms The IDs of all the forms that use this to be submitted.
 function SubmitMultipartForms(forms)
 {
     $(forms).on("submit", function(e){
