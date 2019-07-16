@@ -31,57 +31,86 @@ class Toolkit
 
     UseTool()
     {
-        if(this.mouse != null && this.canvas.position() != null)
+        switch(this.mode)
         {
-            if( (this.mouse.x >= this.canvas.position().left && this.mouse.x <= this.canvas.position().left + this.canvas.width()) &&
-                (this.mouse.y >= this.canvas.position().top && this.mouse.y <= this.canvas.position().top + this.canvas.height()))
+            case 0:
+                this.AddRuler();
+                break;
+            case 1:
+                this.ClearRulers();
+                break;
+            case -1:
+            default:
+                console.log("No tool currently active!");
+        }
+
+
+        {
+            var outputLen = document.getElementById("length"); 
+            var length;
+            var points = document.getElementsByClassName("points");
+            var vectors = Array();
+            if(points.length > 1)
             {
-                switch(this.mode)
-                {
-                    case 0:
-                        this.AddRuler();
-                        break;
-                    case 1:
-                        break;
-                    case 2:
-                        break;
-                    case -1:
-                    default:
-                        console.log("No tool currently active!");
-                }
+                vectors[0] = (points[0].innerHTML.replace("[", "").replace("]", "").split(" "));
+                vectors[1] = (points[1].innerHTML.replace("[", "").replace("]", "").split(" "));
+
+                length = Math.sqrt(Math.pow(vectors[1][0] - vectors[0][0], 2) + Math.pow(vectors[1][1] - vectors[0][1], 2) + Math.pow(vectors[1][2] - vectors[0][2], 2));
+                outputLen.innerHTML = length;
             }
         }
     }
 
     AddRuler()
     {
-        function PostResult(ruler, x_offset)
+        // TODO: Refactor this and in GoFish.go to respectively submit and receive both rulers simultaneously.
+        function PostResult(ruler, url, x_offset)
         {
             var line = ruler.line;
             var sx = (line.start_point.x - x_offset);
             var ex = (line.end_point.x - x_offset);
-            var data = "{ \"P0\" : {\"x\" :" + sx +", \"y\":"+line.start_point.y+"}, \"" + name+'1' +"\" : {\"x\" :" + ex + ", \"y\":" + line.end_point.y + "}}";
+            var data = "{ \"P0\" : {\"x\" :" + sx +", \"y\":"+line.start_point.y+"}, \"P1\" : {\"x\" :" + ex + ", \"y\":" + line.end_point.y + "}}";
             
             var xhr = new XMLHttpRequest();
-            xhr.open("POST", "/processing/right");
+            xhr.open("POST", url);
             xhr.setRequestHeader("Content-Type", "application/json");                
             xhr.send(data);
         }
 
         if(this.mouse.x <= this.canvas.position().left + this.canvas.width()/2)
         {
-            this.left_rulers = (new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#FF1144"));
+            if(this.left_rulers == null) 
+                this.left_rulers = new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#FF1144");
             this.left_rulers.AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
             if(this.left_rulers.point_2 != null)
-                PostResult(this.left_rulers, 0);
+            {
+                PostResult(this.left_rulers, "/processing/left", 0);
+            }
         }
         else
         {
-            this.right_rulers = (new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#40e0d0"));
+            if(this.right_rulers == null) 
+                this.right_rulers = new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#40e0d0");
             this.right_rulers.AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
             if(this.right_rulers.point_2 != null)
-                PostResult(this.right_rulers, this.canvas.width / 2);
+            {
+                PostResult(this.right_rulers, "/processing/right", this.canvas.width() / 2);
+            }
         }
+    }
+
+    ClearRulers()
+    {
+        if(this.left_rulers != null) this.left_rulers = null;
+        if(this.right_rulers != null) this.right_rulers = null;
+    }
+
+    Render()
+    {
+        var canvas = document.getElementById("adjusted-video");
+        if(this.left_rulers != null) this.left_rulers.Render(canvas);
+        if(this.right_rulers != null) this.right_rulers.Render(canvas);
+        this.canvas.load(window.location.href + " #adjusted-video > *");
     }
 }
 
@@ -178,7 +207,6 @@ class Ruler
 
     Render(canvas)
     {
-
         var context = canvas.getContext('2d');
         context.fillStyle = this.colour;
         context.strokeStyle = this.colour;
@@ -187,20 +215,6 @@ class Ruler
         if(this.point_1 != null) this.point_1.Render(canvas);
         if(this.point_2 != null) this.point_2.Render(canvas);
     }
-
-    Calculate3DPoints()
-    {
-        // <x, y, w> = P < X, Y, Z, 1>
-        //
-        //     | fx  0  px  0 |
-        // P = |  0 fy  py  0 |
-        //     |  0  0   1  0 |
-
-        
-
-    }
-
-
 }
 
 class Mouse

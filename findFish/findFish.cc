@@ -77,8 +77,9 @@ int main(int argc, char** argv)
         }
 
 #else
-        for (size_t i = 0; i < video_files.size() / 2; i += 2)
-            ProcessVideo(video_files[i], video_files[(i + 1) % video_files.size()]);
+        if(argv[1] == NULL)
+            for (size_t i = 0; i < video_files.size() / 2; i += 2)
+                ProcessVideo(video_files[i], video_files[(i + 1) % video_files.size()]);
 #endif
         if(video_files.size() > 1)
             for(std::string video  : video_files)
@@ -86,8 +87,11 @@ int main(int argc, char** argv)
             
     } while (bHasVideos);
 
-    //Calibration *calib = nullptr;
-    //TriangulateSelectedPoints(calib);
+    if(argv[1] != NULL)
+    {
+        Calibration *calib = nullptr;
+        TriangulateSelectedPoints(calib);
+    }
 
     return 0;
 }
@@ -321,16 +325,13 @@ void TriangulateSelectedPoints(Calibration*& calib)
             ReadVectorOfVector(fs, "keypoints", keypoints_r);
             input.image_points[1] = keypoints_r;
         }
-
-        if(calib)
+        
+        if(input.image_points[0].size() ==  input.image_points[0].size())
         {
-            delete calib;
-            calib = nullptr;
-        }
-
-        calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
-        calib->ReadCalibration();
-        calib->TriangulatePoints();
+            calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
+            calib->ReadCalibration();
+            calib->TriangulatePoints();
+        }  
     }
 }
 

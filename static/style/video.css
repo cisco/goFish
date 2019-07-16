@@ -23,7 +23,7 @@
     width: 100%;
     height: 2em;
     border-radius: 5px;
-    border: 1px solid #58585B ;
+    border: 1px inset #58585B ;
 }
 
 /* Controls */

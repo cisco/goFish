@@ -5,6 +5,7 @@ body {
     overflow-x: hidden;
 }
 
+/* Navbar */
 .navbar {
     display: flex;
     background: linear-gradient(#097DBC, #049FD9 );
@@ -34,7 +35,17 @@ body {
     display: flex;
     align-items: center;
     font-size: 0.8em !important;
+    vertical-align: top;
+    overflow: hidden;
+    white-space: nowrap;
 }
+
+.nav-item > a {
+    text-decoration: none;
+    color: inherit;
+    font-size: inherit;
+}
+/* End Navbar */
 
 .container {
     display: grid;
@@ -44,6 +55,7 @@ body {
     font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Panel */
 .panel {
     margin: 10px;
     padding: 0;
@@ -67,6 +79,7 @@ body {
     padding: 1em;
     height: 100%;
 }
+/* End Panel */
 
 .window-btn {
     padding: 0;
@@ -79,6 +92,7 @@ body {
     color: #C6C7CA;
 }
 
+/* Dropdown */
 .dropdown{
     display: inline-block;
     text-align: left;
@@ -89,18 +103,6 @@ body {
     min-width: 34px;
     max-width: 34px;
     transition: 0.5s ease-in-out;
-}
-
-.nav-item {
-    vertical-align: top;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.nav-item > a {
-    text-decoration: none;
-    color: inherit;
-    font-size: inherit;
 }
 
 .dropdown-content {
@@ -136,16 +138,18 @@ body {
     z-index: 1;
 }
 
+.dropdown-content.files {
+    overflow-y: scroll !important;
+    overflow-x: hidden;
+}
+/* End Dropdown */
+
 form {
     margin: 0;
     padding: 10px;
 }
 
-.dropdown-content.files {
-    overflow-y: scroll !important;
-    overflow-x: hidden;
-}
-
+/* File selection */
 .file-item, .no-file {
     margin: 0;
     padding: 10px;
@@ -169,7 +173,9 @@ form {
 .file-item:active {
     background: #9E9EA2;
 }
+/* End file selection */
 
+/* Sidenav */
 .sidenav {
     height: 100%;
     width: 0;
@@ -195,12 +201,14 @@ form {
     cursor: pointer;
 }
 
-
 .sidenav:active::after {
     content: "<";
 }
+/* End Sidenav */
 
+/* Processes */
 .process {
     background: #049FD9;
     width: 100%;
 }
+/* End Processes */

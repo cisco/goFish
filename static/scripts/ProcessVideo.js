@@ -4,9 +4,10 @@ class VideoHandler
 {
     constructor() 
     {
-        this.video  = document.getElementById("selected");
+        this.video      = document.getElementById("selected");
         this.canvas     = document.getElementById("adjusted-video");
         this.ended      = false;
+        this.newTime    = 0;
 
         if(this.video != null)
         {
@@ -48,20 +49,23 @@ class VideoHandler
             {
                 context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
 
-                // Calculate the length of the combined video.
-                var time = this.video.maxFrame;
-                var scrubber = document.getElementById("event-time-bar");
-                
-                scrubber.max = time;
-                var ctx = scrubber.getContext("2d");
-                ctx.scale(10, 1);
-                scrubber.height = 40;
+                if(!this.video.paused)
+                {
+                    // Calculate the length of the combined video.
+                    var time = this.video.maxFrame;
+                    var scrubber = document.getElementById("event-time-bar");
+                    
+                    scrubber.max = time;
+                    var ctx = scrubber.getContext("2d");
+                    ctx.scale(10, 1);
+                    scrubber.height = 40;
 
-                var newTime = parseFloat(scrubber.value / FRAMERATE);
-                if(scrubber.value <= Math.round(this.video.currentTime * FRAMERATE))
-                    scrubber.value = Math.round(this.video.currentTime * FRAMERATE);
-                //else this.adjustVideo(newTime - Number(this.video.currentTime));
-                document.getElementById("adjusted-time").innerHTML = Math.round(parseFloat(scrubber.value));
+                    var newTime = parseFloat(scrubber.value / FRAMERATE);
+                    if(scrubber.value <= Math.round(this.video.currentTime * FRAMERATE))
+                        scrubber.value = Math.round(this.video.currentTime * FRAMERATE);
+                    else this.adjustVideo(newTime - Number(this.video.currentTime));
+                    document.getElementById("adjusted-time").innerHTML = Math.round(parseFloat(scrubber.value));
+                }
             }
         }
     }
@@ -87,8 +91,11 @@ class VideoHandler
 
     adjustVideo(diff)
     {
-        if (this.video.currentTime instanceof Number && diff instanceof Number)
-            setTimeout(function(){this.video.currentTime += (Number(diff) / FRAMERATE)}, 1000);
+        var self = this;
+        setTimeout(function(){
+            var time = new Number(self.video.currentTime + (diff / FRAMERATE));
+            if(time instanceof Number) {self.video.currentTime = new Number(time);}
+        }, 0);
         this.video.currentTime = Number(Math.max(0, Math.min(this.video.currentTime, this.video.duration)));
     }
 }
@@ -178,6 +185,8 @@ class EventHandler
             var slider = (scrubber.value / scrubber.max) * this.canvas.width;
             this.drawLine(slider, slider+5, "#FFFFFF");
 
+            /* 
+            // FIXME: This works for moving the scrubber bar to the next event, but not the actual video.
             if(this.events[this.event_index] != null)
             {
                 //console.log(this.events);
@@ -190,6 +199,7 @@ class EventHandler
                         this.event_index = (this.event_index + 1) % this.events.length;
                     }
             }
+            */
         }
     }
 
