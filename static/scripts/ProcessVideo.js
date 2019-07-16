@@ -124,7 +124,7 @@ class VideoHandler
 }
 
 /// \class JsonHandler
-/// \brief Gets the JSON from the GO servr fed to the page, decodes it, and 
+/// \brief Gets the JSON from the GO server fed to the page, decodes it, and
 ///        extracts all the event data from it.
 class JsonHandler
 {
@@ -173,7 +173,7 @@ class JsonHandler
 }
 
 /// \class EventHandler
-/// \brief Handles the rendering of the extracted JSON events into the 
+/// \brief Handles the rendering of the extracted JSON events into the
 ///        scrubber bar.
 class EventHandler
 {

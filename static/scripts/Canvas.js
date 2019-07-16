@@ -285,6 +285,7 @@ class Line extends RenderObject
             ctx.fillText(this.Length(), Math.min(this.start_point.x, this.end_point.x) + (d*u.x) + 5,
                                         Math.min(this.start_point.y, this.end_point.y) + (d*u.y) - 5);
             ctx.stroke();
+            console.log("I'm still printing!");
         }
     }
 
