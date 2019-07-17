@@ -1,7 +1,7 @@
 /// \author Tomas Rigaux
 /// \date May 29, 2019
 ///
-/// \brief All of the various tools that can be used on the video canvas are
+/// All of the various tools that can be used on the video canvas are
 /// created here. Each tool is an object which has the ability to be rendered
 /// onto the adjusted video canvas.
 

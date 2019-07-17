@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/fatih/structs"
@@ -20,9 +21,9 @@ import (
 type Server struct {
 	MUX       *http.ServeMux
 	DB        *Database
-	Box       *BoxSDK
+	Box       *Box
 	Info      interface{}
-	Processes []Process
+	Processes []*Process
 }
 
 // NewServer : Constructs a new Server type.
@@ -92,7 +93,12 @@ func (s *Server) ServeInfo(r *http.Request) interface{} {
 	return result
 }
 
-// FileFormat : Structure to contain information about the precise formatting of files being added to the server.
+///////////////////////////////////////////////////////////////////////////////
+// Files
+///////////////////////////////////////////////////////////////////////////////
+
+// FileFormat : Structure to contain information about the precise formatting
+// of files being added to the server.
 type FileFormat struct {
 	Name      string
 	Format    string
@@ -100,7 +106,8 @@ type FileFormat struct {
 	AddSubtag bool
 }
 
-// UploadFiles : Handles video files uploaded to the server by users using forms in the browser.
+// UploadFiles : Handles video files uploaded to the server by users using
+// forms in the browser.
 func (s *Server) UploadFiles(r *http.Request, formValues []string, saveLocations []string, FileFormat FileFormat, boxFolderID string) {
 	formData := r.MultipartForm
 
@@ -204,6 +211,10 @@ func (s *Server) UploadFiles(r *http.Request, formValues []string, saveLocations
 	log.Println(" Finished Upload.")
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Processes
+///////////////////////////////////////////////////////////////////////////////
+
 // Process : A programmatic representation of a process running on the server.
 type Process struct {
 	Name        string
@@ -215,10 +226,23 @@ type Process struct {
 
 // AddProcess : Adds a process to the server's list.
 func (s *Server) AddProcess(p *Process) {
-	s.Processes = append(s.Processes, *p)
+	s.Processes = append(s.Processes, p)
 }
 
 // GetProcesses : Returns a pointer to the list of processes running on the server.
-func (s *Server) GetProcesses() *[]Process {
-	return &s.Processes
+func (s *Server) GetProcesses() []*Process {
+	for _, v := range s.Processes {
+		p, err := os.FindProcess(v.ID)
+		if err != nil {
+			log.Println(err)
+		} else {
+			err = p.Signal(syscall.Signal(0))
+			if err != nil {
+				// TODO: Mark for removal.
+				v.Status = "dead"
+			}
+		}
+	}
+
+	return s.Processes
 }

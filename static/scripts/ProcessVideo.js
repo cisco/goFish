@@ -1,7 +1,7 @@
 /// \author Tomas Rigaux
 /// \date May 8, 2019
 ///
-/// \brief This is where the meat of the operations happen. All video related
+/// This is where the meat of the operations happen. All video related
 /// handlers are defined here. Each is meant to handle different tasks relating
 /// to how the video is displayed and is interacted with in browser. Basically,
 /// this is where the video is modified so as to reduce the amount of work 

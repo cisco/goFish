@@ -20,8 +20,8 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-// BoxSDK : Reads in JWT and authenticates.
-type BoxSDK struct {
+// Box : Reads in JWT and authenticates.
+type Box struct {
 	configFile  string
 	accessToken string
 }
@@ -202,15 +202,15 @@ type EmbeddedFile struct {
 	} `json:"expiring_embed_link"`
 }
 
-// NewBoxSDK : Creates a new server authenticator.
-func NewBoxSDK(file string) *BoxSDK {
-	box := &BoxSDK{file, ""}
+// NewBox : Creates a new server authenticator.
+func NewBox(file string) *Box {
+	box := &Box{file, ""}
 	os.Setenv("authURL", "https://api.box.com/oauth2/token")
 	return box
 }
 
 // HTTPRequest : Runs an HTTP request via a defined method.
-func (box *BoxSDK) HTTPRequest(method string, url string, payload io.Reader, headers map[string]string) ([]byte, error) {
+func (box *Box) HTTPRequest(method string, url string, payload io.Reader, headers map[string]string) ([]byte, error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest(method, url, payload)
@@ -249,7 +249,7 @@ func (box *BoxSDK) HTTPRequest(method string, url string, payload io.Reader, hea
 }
 
 // RequestAccessToken : Get valid ACCESS_TOKEN using JWT.
-func (box *BoxSDK) RequestAccessToken() error {
+func (box *Box) RequestAccessToken() error {
 	name, err := ioutil.ReadFile(box.configFile)
 	var boxConfig BoxJWTRequest
 
@@ -331,7 +331,7 @@ func (box *BoxSDK) RequestAccessToken() error {
 // File Functions
 
 // UploadFile : Creates an Access Token to the Box API, then uploads a given name to the specified folder.
-func (box *BoxSDK) UploadFile(file interface{}, newName string, folderID string) (*PathCollection, error) {
+func (box *Box) UploadFile(file interface{}, newName string, folderID string) (*PathCollection, error) {
 	box.RequestAccessToken()
 
 	t := reflect.TypeOf(file)
@@ -400,7 +400,7 @@ func (box *BoxSDK) UploadFile(file interface{}, newName string, folderID string)
 }
 
 // GetFileInfo : Returns information about the file with 'ID' fileID.
-func (box *BoxSDK) GetFileInfo(fileID string) (*FileObject, error) {
+func (box *Box) GetFileInfo(fileID string) (*FileObject, error) {
 	box.RequestAccessToken()
 	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+fileID, nil, nil)
 	if err != nil {
@@ -414,7 +414,7 @@ func (box *BoxSDK) GetFileInfo(fileID string) (*FileObject, error) {
 }
 
 // GetEmbedLink : Returns information about the file with 'ID' fileID.
-func (box *BoxSDK) GetEmbedLink(fileID string) (*EmbeddedFile, error) {
+func (box *Box) GetEmbedLink(fileID string) (*EmbeddedFile, error) {
 	box.RequestAccessToken()
 	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+fileID+"?fields=expiring_embed_link", nil, nil)
 	if err != nil {
@@ -428,7 +428,7 @@ func (box *BoxSDK) GetEmbedLink(fileID string) (*EmbeddedFile, error) {
 }
 
 // DownloadFile : Downloads a file with 'ID' fileID.
-func (box *BoxSDK) DownloadFile(fileID string, location string) error {
+func (box *Box) DownloadFile(fileID string, location string) error {
 	box.RequestAccessToken()
 	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/files/"+fileID+"/content", nil, nil)
 	if err != nil {
@@ -453,7 +453,7 @@ func (box *BoxSDK) DownloadFile(fileID string, location string) error {
 }
 
 // DeleteFile : Deletes a file in a specific folder with 'ID" fileID.
-func (box *BoxSDK) DeleteFile(fileID string, etag string) error {
+func (box *Box) DeleteFile(fileID string, etag string) error {
 	box.RequestAccessToken()
 	headers := make(map[string]string)
 	headers["If-Match"] = etag
@@ -469,7 +469,7 @@ func (box *BoxSDK) DeleteFile(fileID string, etag string) error {
 // Folder Functions
 
 // CreateFolder : Creates a new folder under the parent folder that has 'ID' parentFolderID.
-func (box *BoxSDK) CreateFolder(name string, parentFolderID string) (*FolderObject, error) {
+func (box *Box) CreateFolder(name string, parentFolderID string) (*FolderObject, error) {
 	box.RequestAccessToken()
 	body := strings.NewReader(`{"name":"` + name + `", "parent": {"id": "` + parentFolderID + `"}}`)
 
@@ -485,7 +485,7 @@ func (box *BoxSDK) CreateFolder(name string, parentFolderID string) (*FolderObje
 }
 
 // GetFolderItems : Returns all the items contained inside the folder with 'ID' folderID.
-func (box *BoxSDK) GetFolderItems(folderID string, limit int, offset int) (*ItemCollection, error) {
+func (box *Box) GetFolderItems(folderID string, limit int, offset int) (*ItemCollection, error) {
 	box.RequestAccessToken()
 
 	response, err := box.HTTPRequest("GET", "https://api.box.com/2.0/folders/"+folderID+"/items?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset), nil, nil)
@@ -500,7 +500,7 @@ func (box *BoxSDK) GetFolderItems(folderID string, limit int, offset int) (*Item
 }
 
 // DeleteFolder : Deletes the folder with 'ID' folderID.
-func (box *BoxSDK) DeleteFolder(folderID string) {
+func (box *Box) DeleteFolder(folderID string) {
 	box.RequestAccessToken()
 	_, err := box.HTTPRequest("DELETE", "https://api.box.com/2.0/folders/"+folderID+"?recursive=true", nil, nil)
 	if err != nil {
