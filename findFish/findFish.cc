@@ -41,7 +41,6 @@ int main(int argc, char** argv)
 
     bool bHasVideos = false;
 
-    // Keep the application running to continuously check for more files
     do 
     {
         std::vector<std::string> json_filters = { ".json", ".JSON" };
@@ -104,7 +103,7 @@ void ProcessVideo(std::string file1, std::string file2)
         VideoCapture left_cap(file1), right_cap(file2);
         if (!left_cap.isOpened() && !right_cap.isOpened())
         {
-            cerr << "*** Could not open video file(s)" << endl;
+            std::cerr << "*** Could not open video file(s)" << std::endl;
             return;
         }
 
@@ -163,7 +162,7 @@ void ProcessVideo(std::string file1, std::string file2)
                 if((!detectQR_right || !detectQR_right->DetectedQR()) || (detectQR_left->DetectedQR() && detectQR_right->DetectedQR()) || right_frame.empty())
                     right_cap.read(right_frame);
 
-                if (left_frame.empty() || right_frame.empty())
+                if ((left_frame.empty() || right_frame.empty()) && (currentFrame < totalFrames - 1))
                     continue;
 
                 currentFrame++;
@@ -200,7 +199,7 @@ void ProcessVideo(std::string file1, std::string file2)
                 // Only start writing if both videos are synced up.
                 if(detectQR_left->DetectedQR() && detectQR_right->DetectedQR())
                 {
-                    cout << "Writing...\n";
+                    cout << "Writing frame " << currentFrame << " of " << totalFrames << "\n";
                     // Account for frame offset from the last detected QR code frame.
                     if(frameOffset == -1) frameOffset = currentFrame;
                     int adj_frame = (currentFrame - frameOffset);                    
@@ -214,10 +213,11 @@ void ProcessVideo(std::string file1, std::string file2)
                     // Write the concatenated undistorted frames.
                     cv::Mat res = ConcatenateMatrices(left_frame, right_frame);
                     
-                    /*imshow("res", res);
+                    /*
+                    imshow("res", res);
                     char c = waitKey(25);
-                    if(c == 27) break;*/
-                    
+                    if(c == 27) break;
+                    */
                     writer << res;
                 }
             }

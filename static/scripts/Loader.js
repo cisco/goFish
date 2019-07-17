@@ -1,7 +1,7 @@
 /// \author Tomas Rigaux
 /// \date May 16, 2019
 ///
-/// \brief Loader.js handles most of the jQuery related commands that help keep
+/// Loader.js handles most of the jQuery related commands that help keep
 /// the page Asynchronous with loading in new information from the server-side
 /// Go template code.
 
@@ -31,6 +31,11 @@ $(function(){
         $(".file-item").on("click", function(e){
             $.post("/video/", JSON.stringify({file : $(this).html()}), function(response){ $(".container").html($('<div />').append(response).find(".container").html()); Refresh(e);});
         });
+
+        $("#show-process").on("click", function(e){
+        console.log("AH");
+        $("#processes").toggle();
+        });
     }
 
     // Startup timers.
@@ -53,6 +58,7 @@ $(document).ajaxComplete(function(){
         e.stopImmediatePropagation();
         $.post("/video/", JSON.stringify({file : $(this).html()}), function(response){ $(".container").html($('<div />').append(response).find(".container").html()); Refresh(e);});
     });
+
 });
 
 

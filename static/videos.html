@@ -71,18 +71,26 @@
                 <a href="https://github.com/cisco/goFish.git" target="_blank">&emsp;Github</a>
             </div>
         </div>
+        <div class="nav-item">
+            <button id="show-process"><i class='fas'>&#xf5fd;</i></button>
+        </div>
     </div>
 
     <!-- Main body Container -->
     <div class="container">
         <!-- Sidenav containing additional info-->
-        <div class="sidenav" id="processes" hidden>
+        <div class="sidenav" id="processes">
             {{if .Processes}}
-                {{range $i , $p := .Processes}}
-                    <div class="process">{{ $p.ID }}</div>
+                {{range $i , $p := .Processes.P}}
+                    <div class="process">
+                        <span class="id">{{ $p.ID }}</span>
+                        <span class="name">{{ $p.Name }}</span>
+                        <span class="status {{$p.Status}}">&emsp;</span>
+                    </div>
                 {{end}}
             {{end}}
         </div>
+
 
         <!-- Adjusted Video drawn to Canvas -->
         <div id="main-video" class="panel">

@@ -43,7 +43,7 @@ func main() {
 	os.Setenv("calibImgFolder", "81405876091")
 	os.Setenv("calibResultFolder", "81406022555")
 
-	goFish := &GoFish{NewServer(), NewBoxSDK("database/211850911_ojaojsfr_config.json"), ""}
+	goFish := &GoFish{NewServer(), NewBox("database/211850911_ojaojsfr_config.json"), ""}
 
 	go goFish.ProcessAndUploadVideos("./static/videos/")
 	go goFish.CalibrateCameras()
@@ -58,7 +58,7 @@ func main() {
 // GoFish : The main object
 type GoFish struct {
 	server *Server
-	box    *BoxSDK
+	box    *Box
 	video  string
 }
 
@@ -80,10 +80,12 @@ func (goFish *GoFish) StartServer() {
 		PageInfo  func(*http.Request) interface{}
 		PointInfo func(*http.Request) interface{}
 		Files     func(*http.Request) interface{}
+		Processes func(*http.Request) interface{}
 	}{
 		goFish.HandleVideoHTML,
 		goFish.GetWorldPoints,
 		goFish.GetFilenames,
+		goFish.GetProcesses,
 	})
 
 	goFish.server.BuildHTMLTemplate("static/videos.html", "/", goFish.server.ServeInfo)
@@ -193,7 +195,7 @@ func (goFish *GoFish) RunProcess(instr string, args ...string) {
 	defer cmd.Wait()
 
 	if cmd.Process != nil {
-		log.Printf("=== Started process with PID: %d ===\n", cmd.Process.Pid)
+		log.Printf("=== Started process %s with PID: %d ===\n", strings.TrimPrefix(instr, "./"), cmd.Process.Pid)
 		goFish.server.AddProcess(&Process{strings.TrimPrefix(instr, "./"), cmd.Process.Pid, "active", time.Now(), time.Time{}})
 		/*
 				// Start looping timer to check that the process is still running.
@@ -482,6 +484,11 @@ func (goFish *GoFish) GetFilenames(r *http.Request) interface{} {
 	}
 
 	return struct{ Names []string }{fileNames}
+}
+
+// GetProcesses : Gets all processed video files and returns them as a list.
+func (goFish *GoFish) GetProcesses(r *http.Request) interface{} {
+	return struct{ P []*Process }{goFish.server.GetProcesses()}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -3,6 +3,12 @@ body {
     margin: 0;
     /*background: linear-gradient(to right, #004BAF , #097DBC , #049FD9, #097DBC,  #004BAF );*/
     overflow-x: hidden;
+
+    user-select: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 /* Navbar */
@@ -178,37 +184,51 @@ form {
 /* Sidenav */
 .sidenav {
     height: 100%;
-    width: 0;
-    grid-column: 1;
-    background: #097DBC;
+    width: 200px;
+    display: none;
+    position: absolute;
+    background: #E8EBF1;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    user-select: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
-.sidenav::after{
-    height: 2em;
-    width: 2em;
-    background: #097DBC;
-    content: ">";
-    position: relative;
-    display: block;
-    right: -2em;
-    float: right;
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
-    text-align: center;
-}
-
-.sidenav:hover::after {
-    cursor: pointer;
-}
-
-.sidenav:active::after {
-    content: "<";
+#show-process {
+    font-size: 1.2em;
 }
 /* End Sidenav */
 
 /* Processes */
 .process {
-    background: #049FD9;
-    width: 100%;
+    background: #DFDFDF;
+    border-bottom: 1px solid #C6C7CA;
+    padding: 1em;
+}
+
+.process > .id {
+
+}
+
+.process > .name {
+    padding-right: 1em;
+}
+
+
+.process > .status {
+    display: inline-block;
+    border-radius: 50%;
+    padding: 0;
+    margin: 0;
+    width: 18px;
+    height:18px;
+}
+.process > .status.active {
+    background: #6CC04A;
+}
+.process > .status.dead {
+    background: #8B1001;
 }
 /* End Processes */
