@@ -11,21 +11,6 @@
 
 std::vector<std::string> Split(std::string&, const char*);
 
-
-static cv::Point mouse;
-static cv::Mat draw;
-static void onMouse( int event, int x, int y, int, void* )
-{
-    if(event != cv::EVENT_LBUTTONDOWN )
-        return;
-
-    mouse = cv::Point(x, y);
-    cv::circle(draw, mouse, 6, cv::Scalar(150, 0, 200), -1);
-    std::cout << "*** X=" << x << " | Y=" << y <<std::endl;
-    cv::imshow("Rectified (Undistorted) Image", draw);
-}
-
-
 Calibration::Calibration(Input& in, CalibrationType type, std::string outfile)
 {
     for(int i = 0; i < 2; i++)
@@ -41,9 +26,6 @@ Calibration::Calibration(Input& in, CalibrationType type, std::string outfile)
     this->type              = type;
     this->outfile_name      = outfile;
     this->out_dir           = "calib_config/";
-
-    cv::namedWindow("Rectified (Undistorted) Image");
-    cv::setMouseCallback("Rectified (Undistorted) Image", onMouse, 0);
 }
 
 void Calibration::ReadImages(std::string dir1, std::string dir2)
