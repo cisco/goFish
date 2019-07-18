@@ -33,10 +33,12 @@
 
 # Extra files
 .DS_Store
+*.yaml
+
+# Extra Folders
+.vscode/
 static/videos/
 static/video-info/
-.vscode/
-*.yaml
 static/proc_videos/
-database/
 static/temp/
+docs/

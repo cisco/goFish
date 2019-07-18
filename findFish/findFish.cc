@@ -316,12 +316,13 @@ void TriangulateSelectedPoints(Calibration*& calib)
         Calibration::Input input;
         vector<vector<Point2f> > keypoints_l, keypoints_r;
         {
-            FileStorage fs("config/measure_points_left.yaml", FileStorage::READ);
+            // TODO: Combine the two of these to be read from the same file. This requires the JS post them together.
+            FileStorage fs("calib_config/measure_points_left.yaml", FileStorage::READ);
             ReadVectorOfVector(fs, "keypoints", keypoints_l);
             input.image_points[0] = keypoints_l;
         }
         {
-            FileStorage fs("config/measure_points_right.yaml", FileStorage::READ);
+            FileStorage fs("calib_config/measure_points_right.yaml", FileStorage::READ);
             ReadVectorOfVector(fs, "keypoints", keypoints_r);
             input.image_points[1] = keypoints_r;
         }

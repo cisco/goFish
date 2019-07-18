@@ -73,7 +73,7 @@ std::map<std::string, std::string> QREvent::GetGeoURIValues(std::string& uri)
             json.insert(std::make_pair("long", values[1]));
         }
         auto values = SplitString(str, "=");
-        for(int i = 0; i < values.size()-1; i+=2)
+        for(size_t i = 0; i < values.size()-1; i+=2)
             json.insert(std::make_pair(values[i], values[i+1]));
     }
     
@@ -133,8 +133,8 @@ std::vector<std::string> SplitString(std::string& str, const char* delimiter)
     {
         if (i > str.length())
             i = str.length() - 1;
-            result.push_back(regex_replace(temp.substr(0, i), r, ""));
-            temp.erase(0, i + 1);
+        result.push_back(regex_replace(temp.substr(0, i), r, ""));
+        temp.erase(0, i + 1);
     }
     if(regex_replace(temp.substr(0, i), r, "") != "") 
         result.push_back(regex_replace(temp.substr(0, i), r, ""));
