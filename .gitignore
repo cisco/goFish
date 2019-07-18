@@ -17,7 +17,7 @@
 *.dll
 
 # Fortran module files
-*.mod
+#*.mod
 *.smod
 
 # Compiled Static libraries
@@ -42,3 +42,4 @@ static/video-info/
 static/proc_videos/
 static/temp/
 docs/
+private_config/
