@@ -90,7 +90,7 @@ void Calibration::GetImagePoints()
 {
     std::cout << "  > Finding image points..." << std::endl;
    
-    for (int j = 0; j < (input.images[0].size() + input.images[1].size())/2; j++)
+    for (size_t j = 0; j < (input.images[0].size() + input.images[1].size())/2; j++)
     {
         std::string imageL = input.images[0][j], imageR = input.images[1][j];
         cv::Mat imgL = cv::imread(imageL, cv::IMREAD_GRAYSCALE), imgR = cv::imread(imageR, cv::IMREAD_GRAYSCALE), frameL, frameR;
@@ -292,9 +292,7 @@ void Calibration::GetUndistortedImage()
         cv::initUndistortRectifyMap(result.CameraMatrix[i%2], result.DistCoeffs[i%2], R, P, input.image_size, CV_32FC1, remap[i%2][0], remap[i%2][1]);
         cv::remap(frame, undist_img, remap[i%2][0],remap[i%2][1], cv::INTER_LINEAR, cv::BORDER_CONSTANT);
 
-        draw = undist_img;
-        
-        for(int l = 0; l < input.image_points[i%2][j].size(); l++)
+        for(size_t l = 0; l < input.image_points[i%2][j].size(); l++)
         {
             //cv::circle(undist_img, input.image_points[i%2][j][l], 6, cv::Scalar(0, 0, 255), -1);
             //cv::circle(undist_img, result.non_stereo_points[i%2][j][l], 6, cv::Scalar(255, 100, 0), -1);
@@ -402,8 +400,8 @@ std::vector<std::string> Split(std::string& str, const char* delimiter)
     {
         if (i > str.length())
             i = str.length() - 1;
-            result.push_back(regex_replace(temp.substr(0, i), r, ""));
-            temp.erase(0, i + 1);
+        result.push_back(regex_replace(temp.substr(0, i), r, ""));
+        temp.erase(0, i + 1);
     }
     if(regex_replace(temp.substr(0, i), r, "") != "") 
         result.push_back(regex_replace(temp.substr(0, i), r, ""));
