@@ -10,7 +10,7 @@ int main(int argc, char** argv)
      
      calib->ReadImages(argv[1], argv[2]);
      calib->RunCalibration();
-     calib->GetUndistortedImage();
+     //calib->GetUndistortedImage();
      
      delete calib;
      return 0;

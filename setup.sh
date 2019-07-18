@@ -61,8 +61,8 @@ cd .. || exit
 ## Build C++
 cd findFish || exit
 mkdir build && cd build || exit
-cmake .. && make && cd ../..
+cmake .. && make -j7 && cd ../..
 
 cd CameraCalibration || exit
 mkdir build && cd build || exit
-cmake .. && make && cd ../..
+cmake .. && make -j7 && cd ../..
