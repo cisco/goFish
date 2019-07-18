@@ -4,17 +4,27 @@ HOME_DIRECTORY=/home/ubuntu
 PROJECT_DIRECTORY=~
 OPENCV_VERSION=4.1.0
 
-## Install Opencv 4.1
-sudo apt-get update
-
 if [ $1 = "FULL" ]; then
-    sudo apt-get install cmake
-    sudo apt-get install gcc
-    sudo apt-get install g++
-    sudo apt-get install golang-go
+    ## Linux
+    if [[ "$OSTYPE" == "linux-gnu" ]]; then
+        sudo apt-get update
+        sudo apt-get install cmake
+        sudo apt-get install gcc
+        sudo apt-get install g++
+        sudo apt-get install golang-go
+    ## Mac OSX
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        brew update
+        brew install cmake
+    fi
 fi
 
+## Install Opencv 4.1
 if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
+    if [[ "$OSTYPE" == "linux-gnu" ]]; then
+        sudo apt-get install build-essential
+        sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+    fi
     ## Get OpenCV git repos.
     cd ~ || exit
     git clone https://github.com/opencv/opencv.git
@@ -29,7 +39,7 @@ if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
     cd build || exit
     
     ## Make and install OpenCV.
-    cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D OPENCV_GENERATE_PKGCONFIG=ON -D OPENCV_EXTRA_MODULES_PATH=$HOME_DIRECTORY/opencv_contrib/modules -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF ..
+    cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D OPENCV_GENERATE_PKGCONFIG=ON -D OPENCV_EXTRA_MODULES_PATH=$HOME_DIRECTORY/opencv_contrib/modules -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DWITH_FFMPEG=1 ..
     make -j7
     sudo make install
     
@@ -60,9 +70,13 @@ cd .. || exit
 
 ## Build C++
 cd findFish || exit
-mkdir build && cd build || exit
+mkdir build
+cd build || exit
 cmake .. && make -j7 && cd ../..
 
 cd CameraCalibration || exit
-mkdir build && cd build || exit
+mkdir build
+cd build || exit
 cmake .. && make -j7 && cd ../..
+
+

@@ -43,7 +43,7 @@ func main() {
 	os.Setenv("calibImgFolder", "81405876091")
 	os.Setenv("calibResultFolder", "81406022555")
 
-	goFish := &GoFish{NewServer(), NewBox("config/box_jwt.json"), ""}
+	goFish := &GoFish{NewServer(), NewBox("private_config/box_jwt.json"), ""}
 
 	go goFish.ProcessAndUploadVideos("./static/videos/")
 	go goFish.CalibrateCameras()
@@ -459,7 +459,6 @@ func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
 func (goFish *GoFish) GetWorldPoints(r *http.Request) interface{} {
 	file, err := ioutil.ReadFile("calib_config/ObjectPoints.yaml")
 	if err != nil {
-		log.Println(err)
 		return nil
 	}
 
