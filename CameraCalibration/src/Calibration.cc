@@ -21,7 +21,7 @@ Calibration::Calibration(Input& in, CalibrationType type, std::string outfile)
 
     this->input.image_size        = in.image_size;
     this->input.grid_size         = in.grid_size != cv::Size() ? in.grid_size : cv::Size(19, 11);
-    this->input.grid_dot_size     = in.grid_dot_size != 0.f ? in.grid_dot_size : 13.f; // mm
+    this->input.grid_dot_size     = in.grid_dot_size >= 1.f ? in.grid_dot_size : 13.f; // mm
 
     this->type              = type;
     this->outfile_name      = outfile;
@@ -137,7 +137,6 @@ void Calibration::SingleCalibrate()
     std::cout << "=== Starting Camera Calibration ===\n";
 
     GetImagePoints();
-
     
     int i = 0;
     for (auto image_points : input.image_points)
@@ -156,6 +155,16 @@ void Calibration::SingleCalibrate()
             i++;
             continue;
         }
+
+        for(size_t i = 0; i < input.object_points.size(); i++)
+        for(size_t j = 0; j < input.object_points[i].size(); j++)
+                std::cout << "Object Points: " << input.object_points[i][j] <<std::endl;
+
+for(size_t k = 0; k < input.image_points[i].size(); k++)
+        for(size_t j = 0; j < input.image_points[i][k].size(); j++)
+                std::cout << "Image Points: " << input.image_points[i][k][j] <<std::endl;
+
+std::cout << "Image Size: " << input.image_size <<std::endl;
 
         //std::vector<cv::Mat> rvecs, tvecs;
         flags |= cv::CALIB_FIX_ASPECT_RATIO;

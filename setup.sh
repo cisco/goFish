@@ -46,7 +46,20 @@ if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
         -D BUILD_opencv_java=OFF \
         -D BUILD_opencv_python=OFF \
         -D WITH_FFMPEG=1 \
-        -D WITH_TBB=ON \
+        -D WITH_TBB=OFF \
+        -D BUILD_opencv_aruco=OFF\
+        -D BUILD_opencv_bioinspired=OFF\
+        -D BUILD_opencv_datasets=OFF\
+        -D BUILD_opencv_dnns_easily_fooled=OFF\
+        -D BUILD_opencv_dpm=OFF\
+        -D BUILD_opencv_saliency=OFF\
+        -D BUILD_opencv_matlab=OFF\
+        -D BUILD_opencv_fuzzy=OFF\
+        -D BUILD_opencv_hdf=OFF\
+        -D BUILD_opencv_tracking=ON\
+        -D BUILD_opencv_xfeatures2d=ON\
+        -D BUILD_opencv_ximgproc=ON\
+        -D BUILD_opencv_xobjdetect=ON\
         ..
     make -j7
     sudo make install
