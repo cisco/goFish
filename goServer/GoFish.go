@@ -273,7 +273,7 @@ func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
 					return struct{ VideosLoaded bool }{false}
 				}
 
-				_, err = os.Open("static/temp/" + videoName)
+				_, err = os.Open("static/video-info/" + "DE_" + strings.TrimSuffix(videoName, ".mp4") + ".json")
 				if err != nil {
 					items, err = goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 1000, 0)
 					var infoID string
