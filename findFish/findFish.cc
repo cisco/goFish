@@ -100,7 +100,7 @@ void ProcessVideo(std::string file1, std::string file2)
     clock_t time_start = clock();
     if(file1 != file2)
     {
-        VideoCapture left_cap(file1), right_cap(file2);
+        cv::gpu::VideoCapture left_cap(file1), right_cap(file2);
         if (!left_cap.isOpened() && !right_cap.isOpened())
         {
             std::cerr << "*** Could not open video file(s)" << std::endl;
