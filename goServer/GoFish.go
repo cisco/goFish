@@ -279,7 +279,7 @@ func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
 					var infoID string
 					for _, v := range items.Entries {
 						if v.Name == "DE_"+strings.TrimSuffix(videoName, ".mp4")+".json" {
-							fileID = v.ID
+							infoID = v.ID
 							break
 						}
 					}
