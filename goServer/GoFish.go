@@ -37,6 +37,7 @@ func main() {
 	os.Setenv("mainFolder", "80559242908")
 	os.Setenv("vidFolder", "80687476563")
 	os.Setenv("procVidFolder", "80573476756")
+	os.Setenv("vidInfoFolder", "82388040956")
 
 	// Box calibration folders
 	os.Setenv("calibFolder", "81405395430")
@@ -94,8 +95,8 @@ func (goFish *GoFish) StartServer() {
 	goFish.server.BuildHTMLTemplate("static/videos.html", "/processing/", goFish.HandleRulerHTML)
 	goFish.server.Box = goFish.box
 
-	folder, _ := goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 10, 0)
-	log.Println(folder)
+	//folder, _ := goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
+	//log.Println(folder)
 
 	// TODO: Temporary, this shouldn't stay.
 	/*
@@ -145,11 +146,12 @@ func (goFish *GoFish) ProcessAndUploadVideos(args ...string) {
 							defer dir.Close()
 
 							files, err := dir.Readdir(5)
-							if len(files) > 1 {
+							if len(files) > 0 {
 								for _, file := range files {
 									if file.Name() != ".DS_Store" {
 										goFish.box.UploadFile("./static/proc_videos/"+file.Name(), file.Name(), os.Getenv("procVidFolder"))
 										os.Remove("./static/proc_videos/" + file.Name())
+										goFish.box.UploadFile("./static/video-info/DE_"+strings.TrimSuffix(file.Name(), ".mp4")+".json", "DE_"+strings.TrimSuffix(file.Name(), ".mp4")+".json", os.Getenv("vidInfoFolder"))
 									}
 								}
 							}
@@ -257,7 +259,6 @@ func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
 			_, err := os.Open("static/temp/" + videoName)
 			if err != nil {
 				items, err := goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 1000, 0)
-
 				var fileID string
 				for _, v := range items.Entries {
 					if v.Name == videoName {
@@ -270,6 +271,24 @@ func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
 				if err != nil {
 					log.Println(err)
 					return struct{ VideosLoaded bool }{false}
+				}
+
+				_, err = os.Open("static/temp/" + videoName)
+				if err != nil {
+					items, err = goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 1000, 0)
+					var infoID string
+					for _, v := range items.Entries {
+						if v.Name == "DE_"+strings.TrimSuffix(videoName, ".mp4")+".json" {
+							fileID = v.ID
+							break
+						}
+					}
+
+					err = goFish.box.DownloadFile(infoID, "static/video-info/")
+					if err != nil {
+						log.Println(err)
+						return struct{ VideosLoaded bool }{false}
+					}
 				}
 			}
 		}
@@ -519,5 +538,9 @@ func IsDirEmpty(name string) (bool, int, error) {
 		return true, 0, nil
 	}
 
-	return false, len(files) - 1, err
+	if files[0].Name() == ".DS_Store" {
+		return false, len(files) - 1, err
+	}
+	return false, len(files), err
+
 }
