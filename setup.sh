@@ -39,13 +39,21 @@ if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
     cd build || exit
     
     ## Make and install OpenCV.
-    cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D OPENCV_GENERATE_PKGCONFIG=ON -D OPENCV_EXTRA_MODULES_PATH=$HOME_DIRECTORY/opencv_contrib/modules -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DWITH_FFMPEG=1 ..
+    cmake -D CMAKE_BUILD_TYPE=RELEASE \
+        -D CMAKE_INSTALL_PREFIX=/usr/local \
+        -D OPENCV_GENERATE_PKGCONFIG=YES \
+        -D OPENCV_EXTRA_MODULES_PATH=$HOME_DIRECTORY/opencv_contrib/modules \
+        -D BUILD_opencv_java=OFF \
+        -D BUILD_opencv_python=OFF \
+        -D WITH_FFMPEG=1 \
+        -D WITH_TBB=ON \
+        ..
     make -j7
     sudo make install
     
     ## Remove the OpenCV git repos to save on space.
-    cd ~ || exit
-    rm -r ~/opencv*
+    #cd ~ || exit
+    #rm -r ~/opencv*
 fi
 
 ## Compile the project.
