@@ -156,16 +156,6 @@ void Calibration::SingleCalibrate()
             continue;
         }
 
-        for(size_t i = 0; i < input.object_points.size(); i++)
-        for(size_t j = 0; j < input.object_points[i].size(); j++)
-                std::cout << "Object Points: " << input.object_points[i][j] <<std::endl;
-
-for(size_t k = 0; k < input.image_points[i].size(); k++)
-        for(size_t j = 0; j < input.image_points[i][k].size(); j++)
-                std::cout << "Image Points: " << input.image_points[i][k][j] <<std::endl;
-
-std::cout << "Image Size: " << input.image_size <<std::endl;
-
         //std::vector<cv::Mat> rvecs, tvecs;
         flags |= cv::CALIB_FIX_ASPECT_RATIO;
         flags |= cv::CALIB_FIX_PRINCIPAL_POINT; 
