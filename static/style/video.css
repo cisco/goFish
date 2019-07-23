@@ -3,35 +3,40 @@
     font-size: 1.5em !important;
 }
 
+/* Video Related */ 
 #videos {
     grid-column: 3 / 11;
 }
-
 #main-video {
     display: inline-block;
     text-align: center;
     grid-column: 2 / 12;
     grid-row: 1;
 }
-
 #adjusted-video {
-    background: #C6C7CA ;
+    background: #111111 ;
 }
-
 #event-time-bar {
-    background: #9E9EA2;
+    background: #222222;
     width: 100%;
     height: 2em;
     border-radius: 5px;
-    border: 1px inset #58585B ;
+    border: 1px solid #57585b;
 }
+/* End Video Related */
 
 /* Controls */
+button {
+    box-shadow: 0px 2px #2b5491;
+}
+button.active {
+    background: #6CC04A !important;
+    box-shadow: 0px 2px #00AD0B;
+}
 #controls {
     display: flex;
     justify-content: center;
 }
-
 #controls > button:first-child {
     background: #049FD9;
     color: #FFFFFF;
@@ -39,7 +44,6 @@
     border: none;
     border-radius: 5px 0 0 5px;
 }
-
 #controls > button {
     background: #049FD9;
     color: #FFFFFF;
@@ -47,7 +51,6 @@
     padding: 0.5em 1em;
     border: none;
 }
-
 #controls > button:last-child {
     background: #049FD9;
     color: #FFFFFF;
@@ -55,7 +58,9 @@
     border: none;
     border-radius: 0 5px 5px 0;
 }
-
+#controls > button:hover {
+    cursor: pointer;
+}
 #controls > button:active {
     background: #097DBC;
 }
@@ -63,26 +68,21 @@
 
 /* Toolkit */
 #tools {
-    position: absolute;
+    position: relative;
+    height: 2em;
 }
-
-#tools.vertical > div > .toolbar {
-    flex-direction: column;
-}
-
 .toolbar {
     display: flex;
     margin: -1em;
 }
-
 .toolbar > button:first-child {
     background: #049FD9;
     color: #FFFFFF;
     padding: 0.5em 1em;
     border: none;
-    border-radius: 0 0 0 8px !important;
+    border-radius: 8px 0 0 8px !important;
+    margin-right: 0.5px !important;
 }
-
 .toolbar > button {
     background: #049FD9;
     color: #FFFFFF;
@@ -90,81 +90,40 @@
     padding: 0.5em 1em;
     border: none;
 }
-
 .toolbar > button:hover {
     cursor: pointer;
 }
-
-button.active {
-    background: #6CC04A !important;
-}
-
 .toolbar > button:last-child {
     background: #049FD9;
     color: #FFFFFF;
     padding: 0.5em 1em;
-    margin:0;
     border: none;
-    border-radius: 0 0 8px 0;
+    border-radius: 0 8px 8px 0;
+    margin-left: 0.5px !important;
 }
-
-#tools.vertical > div > .toolbar > button:first-child {
-    border: none;
-    border-radius: 0 !important;
-}
-
-#tools.vertical > div > .toolbar > button {
-    margin: 1px;
-    padding: 0.75em;
-    border: none;
-}
-
-#tools.vertical > div > .toolbar > button:last-child {
-    border: none;
-    border-radius: 0 0 8px 8px !important;
-}
-
 .toolbar > button:active, .toolbar > button.active:active {
     background: #097DBC !important;
 }
 /* End Toolkit */
 
+/* Info Panel */
 #info-panel {
-    position: absolute;
-    grid-column: 11/13;
+    position: relative;
+    height: inherit;
     text-align: left;
 }
-
 #info-panel > .panel-body {
     overflow-y: scroll;
     overflow-x: auto;
 }
-
 #info-panel > .panel-header:hover {
     cursor: move;
 }
+/* End Info Panel */
 
-#attributes-form {
-
-}
-
-#attributes-form > label{
-    display: inline-block;
-    width: 50%;
-    margin-left:-2em;
-    text-align: right;
-}
-
-#attributes-form > label::after{
-    content: ":";
-}
-
-#attributes-form > select, #attributes-form > input, #attributes-form > textarea {
-    float: right;
-    margin-right: -1em;
-    width: 70%;
-}
-
-#attributes-form > textarea {
-    resize: none;
+#info-tools {
+    display: flex;
+    align-items: center;
+    grid-column: 2 / 12;
+    grid-row: 2;
 }

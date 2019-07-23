@@ -33,9 +33,10 @@ $(function(){
         });
 
         $("#show-process").on("click", function(e){
-        console.log("AH");
-        $("#processes").toggle();
+            $("#processes").slideToggle();
         });
+        
+        $(".loader").hide();
     }
 
     // Startup timers.
@@ -49,6 +50,29 @@ $(function(){
             $("#processes").load(window.location.href + " #processes > *");
         }, 5000);
     }
+
+    // Navbar gradient effect.
+    {
+        lightColor = "#57585b";
+        gradientSize = 200;
+        var originalBG = $(".navbar").css("background-color");
+        $('.navbar').mousemove(function(e) {
+            x  = e.pageX - this.offsetLeft;
+            y  = e.pageY - this.offsetTop;
+            xy = x + " " + y;
+            
+            var bgWebKit = "-webkit-gradient(radial, " + xy + ", 0, " + xy + ", " + gradientSize + ", from(" + lightColor + "), to(rgba(255,255,255,0.0))), " + originalBG;
+            var bgMoz    = "-moz-radial-gradient(" + x + "px " + y + "px 45deg, circle, " + lightColor + " 0%, " + originalBG + " " + gradientSize + "px)";
+                                
+            $(this)
+                .css({ background: bgWebKit })
+                .css({ background: bgMoz });         
+        }).mouseleave(function() {
+                $(this).css({ background: originalBG });
+        });
+    }
+
+    setTimeout(LoadAll, 1000);
 });
 
 /// Runs after every completed AJAX request.
@@ -85,6 +109,7 @@ function LoadAll()
     // Draw events on the scrubber bar.
     eventHandler.draw();
     HandleTools();
+    
 }
 
 /// Refreshes specific elements on the oage to update them with new content.
@@ -138,13 +163,6 @@ function Refresh(e){
         });
     }
 
-    // Init jQuery Windows.
-    {
-        $("#tools").draggable();
-        $("#info-panel").draggable();
-    }
-
-
     setTimeout(LoadAll, 1000);
 }
 
@@ -154,6 +172,9 @@ function SubmitMultipartForms(forms)
 {
     $(forms).on("submit", function(e){
         e.preventDefault();
+
+        $(this).hide();
+        $(".loader").show();
 
         var data = new FormData($(this)[0]);
 
@@ -166,6 +187,8 @@ function SubmitMultipartForms(forms)
             contentType: false,
             cache: false,
             success: function(response){
+                $(forms).show();
+                $(".loader").hide();
                 $(".container").html($('<div />').append(response).find(".container").html());
                 Refresh(e)
             }
@@ -184,9 +207,6 @@ function HandleTools()
         toolkit.UseTool();
         Redraw();
     });
-
-    $("#tools").draggable();
-    $("#info-panel").draggable();
 }
 
 /// Redraws the main video and scrubber bar canvases.

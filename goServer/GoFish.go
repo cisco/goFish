@@ -199,21 +199,6 @@ func (goFish *GoFish) RunProcess(instr string, args ...string) {
 	if cmd.Process != nil {
 		log.Printf("=== Started process %s with PID: %d ===\n", strings.TrimPrefix(instr, "./"), cmd.Process.Pid)
 		goFish.server.AddProcess(&Process{strings.TrimPrefix(instr, "./"), cmd.Process.Pid, "active", time.Now(), time.Time{}})
-		/*
-				// Start looping timer to check that the process is still running.
-				for {
-					time.Sleep(5 * time.Second)
-					_, err := syscall.Getpgid(cmd.Process.Pid)
-					if err != nil {
-						log.Println("!!! Process died! Starting again...")
-						//RunProcess(instr)
-					}
-				}
-			} else {
-				time.Sleep(1 * time.Second)
-				// Try again to start the process.
-				//RunProcess(instr)
-		*/
 	}
 }
 

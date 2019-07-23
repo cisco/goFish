@@ -65,8 +65,8 @@ if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
     sudo make install
     
     ## Remove the OpenCV git repos to save on space.
-    #cd ~ || exit
-    #rm -r ~/opencv*
+    cd ~ || exit
+    rm -r ~/opencv*
 fi
 
 ## Compile the project.
