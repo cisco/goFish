@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 
     bool bHasVideos = false;
 
-    while (bHasVideos)
+    do 
     {
         std::vector<std::string> json_filters = { ".json", ".JSON" };
         auto json_files = GetVideosFromDir(JSON_DIR, json_filters);
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
      //       for(std::string video  : video_files)
       //          std::remove(video.c_str());
             
-    } 
+    } while (bHasVideos);
 
     if(argv[1] != NULL)
     {
