@@ -23,26 +23,27 @@
 class EventBuilder
 {
  public:
-   /// Default constructor.
-   EventBuilder() : start_frame{ -1 }, end_frame{ -1 }, json_object{JSON("")} {}
-   
-   /// Constructs an event for a specific frame.
-   EventBuilder(cv::Mat& frame);
+  /// Default constructor.
+  EventBuilder() : start_frame{ -1 }, end_frame{ -1 }, json_object{JSON("")} {}
 
-   /// Default destructor.
-   virtual ~EventBuilder() {}
+  /// Default destructor.
+  virtual ~EventBuilder() {};
 
-   /// Defines the starting frame of the event.
-   /// \param[in, out] frame The frame number that marks the start of the event.
-   virtual void StartEvent(int& frame)  = 0;
+  /// Check frame for some sort of event.
+  /// \param[in, out] The current frame.
+  virtual void CheckFrame(cv::Mat& frame, int&) = 0;
 
-   /// Defines the ending frame of the event.
-   /// \param[in, out] frame The frame number that marks the end of the event.
-   virtual void EndEvent(int& frame) = 0;
+  /// Defines the starting frame of the event.
+  /// \param[in, out] frame The frame number that marks the start of the event.
+  virtual void StartEvent(int& frame)  = 0;
 
-   /// Returns the event as a JSON object.
-   /// \return The event formatted into a JSON object.
-   const JSON GetAsJSON();
+  /// Defines the ending frame of the event.
+  /// \param[in, out] frame The frame number that marks the end of the event.
+  virtual void EndEvent(int& frame) = 0;
+
+  /// Returns the event as a JSON object.
+  /// \return The event formatted into a JSON object.
+  const JSON GetAsJSON();
 
  protected:
    cv::Mat frame_;
@@ -55,29 +56,33 @@ class EventBuilder
 class QREvent : public EventBuilder
 {
  public:
-   /// Constructs the event around a specific frame.
-   /// \param[in, out] frame The frame in which to check for a QR code.
-   QREvent(cv::Mat& frame);
+  /// Constructs the event around a specific frame.
+  QREvent();
 
-   /// Default destructor.
-   virtual ~QREvent() {}
+  /// Default destructor.
+  virtual ~QREvent() {};
+  
+  /// Check frame for some sort of event.
+  /// \param[in, out] frame The frame in which to check.
+  /// \param[in, out] The current frame.
+  virtual void CheckFrame(cv::Mat&, int&) override;
 
-   /// Denotes the start of the event, and begins checking for a QR code.
-   /// param[in, out] frame The starting frame of the event.
-   virtual void StartEvent(int&) override;
-   
-   /// Denotes the end of the event, and stops checking for a QR code.
-   /// param[in, out] frame The ending frame of the event.
-   virtual void EndEvent(int&) override;
+  /// Denotes the start of the event, and begins checking for a QR code.
+  /// param[in, out] frame The starting frame of the event.
+  virtual void StartEvent(int&) override;
+  
+  /// Denotes the end of the event, and stops checking for a QR code.
+  /// param[in, out] frame The ending frame of the event.
+  virtual void EndEvent(int&) override;
 
-   /// Returns whether or not a QR code was found.
-   /// \return If the QR code was detected or not.
-   const bool DetectedQR();
+  /// Returns whether or not a QR code was found.
+  /// \return If the QR code was detected or not.
+  const bool DetectedQR();
  
  private:
-   /// Parses the QR code URL for a Geo URI.
-   /// \return All the key-value pairs found in the URL.
-   std::map<std::string, std::string> GetGeoURIValues(std::string& uri);
+  /// Parses the QR code URL for a Geo URI.
+  /// \return All the key-value pairs found in the URL.
+  std::map<std::string, std::string> GetGeoURIValues(std::string& uri);
 
 };
 
@@ -86,33 +91,33 @@ class QREvent : public EventBuilder
 class ActivityEvent : public EventBuilder
 {
  public:
-   /// Constructs an event with a unique ID, which extends in a range from start
-   /// to end.
-   /// \param[in] id The unique ID of the event.
-   /// \param[in, out] start The starting frame of the event.
-   /// \param[in, out] end The ending frame of the event.
-   ActivityEvent(int id, int& start, int& end);
+  /// Constructs an event with a unique ID, which extends in a range from start
+  /// to end.
+  /// \param[in] id The unique ID of the event.
+  /// \param[in, out] start The starting frame of the event.
+  /// \param[in, out] end The ending frame of the event.
+  ActivityEvent(int id, int start, int end);
 
-   /// Default destructor for the class.
-   virtual ~ActivityEvent() {}
+  /// Default destructor for the class.
+  virtual ~ActivityEvent() {};
 
-   /// Denotes the start of the event
-   /// param[in, out] frame The starting frame of the event.
-   virtual void StartEvent(int&) override;
+  /// Check frame for some sort of event.
+  /// \param[in, out] frame The frame in which to check.
+  /// \param[in, out] The current frame.
+  virtual void CheckFrame(cv::Mat&, int&) override;
 
-   /// Denotes the end of the event
-   /// param[in, out] frame The ending frame of the event.
-   virtual void EndEvent(int&) override;
+  /// Denotes the start of the event
+  /// param[in, out] frame The starting frame of the event.
+  virtual void StartEvent(int&) override;
 
-   /// Checks whether or not the event is still happening.
-   /// \param[in] active The activity of the event.
-   void SetIsActive(bool active);
+  /// Denotes the end of the event
+  /// param[in, out] frame The ending frame of the event.
+  virtual void EndEvent(int&) override;
 
-   /// Checks whether or not the event is still happening.
-   /// \return The running state of the event.
-   bool IsActive();
+  /// Checks whether or not the event is still happening.
+  /// \return The running state of the event.
+  bool IsActive();
 
  private:
    int id_;
-   bool active_;
 };

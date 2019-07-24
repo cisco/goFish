@@ -36,6 +36,9 @@ public:
     /// \param[in] settings The settings for the tracker.
     Tracker(Settings settings);
 
+    /// Empties the activity event array.
+    ~Tracker();
+
     /// Creates the background subtracted masked image.
     /// \param[in, out] img The image/frame to be masked.
     void CreateMask(cv::Mat& img);
@@ -56,7 +59,7 @@ public:
     Settings Config;
 
     /// Container for all activity events detected.
-    std::map<int, std::pair<int, int>> ActivityRange;
+    std::vector<class ActivityEvent*> ActivityRange;
 
 private:
     cv::Mat _mask;

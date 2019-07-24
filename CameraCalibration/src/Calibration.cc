@@ -56,11 +56,9 @@ void Calibration::RunCalibration()
 
 void Calibration::ReadCalibration()
 {
-    if(input.image_points[0].empty()) std::cout << "No left image points!\n";
-    if(input.image_points[1].empty()) std::cout << "No right image points!\n";
     if(type == CalibrationType::STEREO)
     {
-        if(!input.image_points[0].empty() &&!input.image_points[1].empty())
+        if(!input.image_points[0].empty() && !input.image_points[1].empty())
             result.n_image_pairs = (input.image_points[0].size() + input.image_points[1].size()) / 2;
         
         // Read in calibration data from file.
@@ -156,7 +154,6 @@ void Calibration::SingleCalibrate()
             continue;
         }
 
-        //std::vector<cv::Mat> rvecs, tvecs;
         flags |= cv::CALIB_FIX_ASPECT_RATIO;
         flags |= cv::CALIB_FIX_PRINCIPAL_POINT; 
         flags |= cv::CALIB_ZERO_TANGENT_DIST;
@@ -204,7 +201,6 @@ void Calibration::StereoCalibrate()
     
 
     flags = 0;
-    //flags |= cv::CALIB_FIX_INTRINSIC;
     flags |= cv::CALIB_USE_INTRINSIC_GUESS;
     flags |= cv::CALIB_SAME_FOCAL_LENGTH;
 
@@ -294,7 +290,6 @@ void Calibration::GetUndistortedImage()
         for(size_t l = 0; l < input.image_points[i%2][j].size(); l++)
         {
             //cv::circle(undist_img, input.image_points[i%2][j][l], 6, cv::Scalar(0, 0, 255), -1);
-            //cv::circle(undist_img, result.non_stereo_points[i%2][j][l], 6, cv::Scalar(255, 100, 0), -1);
             cv::circle(undist_img, result.undistorted_points[i%2][j][l], 6, cv::Scalar(0, 255, 0), -1);
         }
 
@@ -307,6 +302,9 @@ void Calibration::GetUndistortedImage()
 
 void Calibration::UndistortImage(cv::Mat& img, int index)
 {
+    if(result.CameraMatrix[index].empty() || result.DistCoeffs[index].empty())
+        return;
+        
     if(index < 2 && !img.empty())
     {
         cv::Mat uimg;

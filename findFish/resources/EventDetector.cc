@@ -14,8 +14,6 @@ std::vector<std::string> SplitString(std::string& str, const char* delimiter);
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Event Builder Base Class
-EventBuilder::EventBuilder(Mat& frame)
-    : frame_{ frame }, start_frame{ -1 }, end_frame{ -1 }, json_object{JSON("")} {}
 
 const JSON EventBuilder::GetAsJSON()
 {
@@ -25,26 +23,31 @@ const JSON EventBuilder::GetAsJSON()
 
 /////////////////////////////////////////////////////////////////////////////////////
 // QR Code Event
-QREvent::QREvent(cv::Mat& frame) : EventBuilder(frame) {}
+QREvent::QREvent() : EventBuilder() {}
 
-void QREvent::StartEvent(int& currFrame)
+void QREvent::CheckFrame(cv::Mat& frame, int& currFrame)
 {
+    frame_ = frame;
     if(!frame_.empty())
     {
         QRCodeDetector qrDetector;
         Mat boundBox;
         std::string url = qrDetector.detectAndDecode(frame_, boundBox);
-        if (url.length() > 0 && (start_frame == -1 && end_frame == -1)) 
+        if (url.length() > 0 && !DetectedQR()) 
         {
-            start_frame = currFrame;
-
+            StartEvent(currFrame);
             std::map<std::string, std::string> info = GetGeoURIValues(url);
             info.insert(std::make_pair("frame", std::to_string(start_frame)));
             json_object = JSON("Event_QRCode", info);
 
             EndEvent(currFrame);
         }
-    }
+    }  
+}
+
+void QREvent::StartEvent(int& currFrame)
+{
+    start_frame = currFrame;
 }
 
 void QREvent::EndEvent(int& currFrame)
@@ -83,14 +86,16 @@ std::map<std::string, std::string> QREvent::GetGeoURIValues(std::string& uri)
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Activity Event
-ActivityEvent::ActivityEvent(int id, int& start, int& end) : EventBuilder(), id_{id}, active_{true} 
+ActivityEvent::ActivityEvent(int id, int start, int end) : EventBuilder(), id_{id}
 {
     StartEvent(start);
     if(end > 0)
-    {
-        SetIsActive(false);
         EndEvent(end);
-    }
+}
+
+void ActivityEvent::CheckFrame(cv::Mat& frame, int& currFrame)
+{
+    
 }
 
 void ActivityEvent::StartEvent(int& currFrame)
@@ -100,7 +105,7 @@ void ActivityEvent::StartEvent(int& currFrame)
 
 void ActivityEvent::EndEvent(int& currFrame)
 {
-    if(start_frame != -1 && end_frame == -1 && !IsActive()) end_frame = currFrame;
+    if(IsActive()) end_frame = currFrame;
     if(start_frame != -1 && end_frame != -1)
     {
         std::map<std::string, std::string> info;
@@ -110,14 +115,9 @@ void ActivityEvent::EndEvent(int& currFrame)
     }
 }
 
-void ActivityEvent::SetIsActive(bool active)
-{
-    active_ = active;
-}
-
 bool ActivityEvent::IsActive()
 {
-    return active_;
+    return (start_frame != -1 && end_frame == -1);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

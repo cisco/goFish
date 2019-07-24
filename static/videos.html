@@ -63,9 +63,7 @@
                     <label for="upload-files">Select Stereo Videos...</label>
                     <input class="submit" type="submit" value="Upload Videos" />
                 </form>
-                <div class="loader">
-                    <div class="loader"><div></div><div></div><div></div></div>
-                </div>
+                <div class="loader"><div></div><div></div><div></div></div>
             </div>
         </div>
         <!-- Calibrate Cameras -->
@@ -85,9 +83,7 @@
                     </div>
                     <input class="submit" type="submit" value="Run Calibration"/>
                 </form>
-                <div class="loader">
-                        <div class="loader"><div></div><div></div><div></div></div>
-                    </div>
+                <div class="loader"><div></div><div></div><div></div></div>
             </div>
         </div>
         <!-- Github Link-->
@@ -135,6 +131,15 @@
         <div id="info-tools" class="panel">
             <!-- Info Panel -->
             <div id="info-panel" class="panel">
+                <!-- Toolbar -->
+                <div id="tools" class="panel">
+                    <div class="panel-body">
+                        <div class="toolbar">
+                            <button id="ruler" onclick="toolkit.SetMode(0, this)"><i class="material-icons">&#xe41c;</i></button>
+                            <button id="clear-ruler" onclick="toolkit.SetMode(1, this)"><i class="material-icons">&#xe888;</i></button>
+                        </div>
+                    </div>
+                </div>
                 <div class="panel-body">
                     <code>
                         {{if .PointInfo}}
@@ -149,15 +154,6 @@
                 </div>
             </div>
 
-            <!-- Toolbar -->
-            <div id="tools" class="panel">
-                <div class="panel-body">
-                    <div class="toolbar">
-                        <button id="ruler" onclick="toolkit.SetMode(0, this)"><i class="material-icons">&#xe41c;</i></button>
-                        <button id="clear-ruler" onclick="toolkit.SetMode(1, this)"><i class="material-icons">&#xe888;</i></button>
-                    </div>
-                </div>
-            </div>
         </div>
 
         {{if .PageInfo.VideosLoaded}}
