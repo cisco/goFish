@@ -1,4 +1,5 @@
 #include "includes/Tracker.h"
+#include "includes/EventDetector.h"
 
 #include <opencv2/imgcodecs.hpp>
 
@@ -10,6 +11,15 @@ Tracker::Tracker(Tracker::Settings s)
     bkgd_sub_ptr = cv::createBackgroundSubtractorKNN();
     bIsActive = false;
     GetCascades();
+}
+
+Tracker::~Tracker()
+{
+    for(auto event : ActivityRange)
+    {
+        delete event;
+        event = nullptr;
+    }
 }
 
 void Tracker::CreateMask(cv::Mat& frame)
@@ -79,25 +89,30 @@ void Tracker::CheckForActivity(int& CurrentFrame)
     {
         if(!bIsActive)
         {
-            bIsActive = true;
             std::cout << "*** Activity Event : " << ActivityRange.size() << std::endl;
-            ActivityRange.insert(std::make_pair(ActivityRange.size()+1, std::make_pair(CurrentFrame, -1)));
+
+            ActivityRange.resize(ActivityRange.size() + 1);
+            if(!ActivityRange[ActivityRange.size()-1])
+            {
+                ActivityRange[ActivityRange.size()-1] = new ActivityEvent(int(ActivityRange.size()), CurrentFrame, -1);
+                bIsActive = true;
+            } else ActivityRange.resize(ActivityRange.size() - 1);
         }
     }
-    else 
-    {
-        // FIXME: Event ends are not being detected after the first ending. This needs to be fixed.
-        if(ActivityRange[ActivityRange.size()].first != -1 && ActivityRange[ActivityRange.size()].second == -1 && bIsActive)
-        {
-            bIsActive = false;
-            ActivityRange[ActivityRange.size()].second = CurrentFrame;
-            std::cout << "*** End Activity!\n";
-        }
-    }
+    else if(ActivityRange.size() > 0)
+        if(ActivityRange[ActivityRange.size()-1])
+            if(ActivityRange[ActivityRange.size()-1]->IsActive() && bIsActive)
+            {
+                std::cout << "*** End Activity: " << ActivityRange.size()-1 << "\n";
+
+                ActivityRange[ActivityRange.size()-1]->EndEvent(CurrentFrame);
+                bIsActive = false;
+            }
 }
 
 void Tracker::GetCascades()
 {
+    // Get all YAML file names from directory.
     std::vector<std::string> names;
     for(auto name : names)
     {
