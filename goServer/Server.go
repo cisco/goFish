@@ -161,7 +161,6 @@ func (s *Server) UploadFiles(r *http.Request, formValues []string, saveLocations
 				log.Println("Error: Unable to create the file to be written. Please enure you have correct write access priviliges.")
 				return
 			}
-			//defer os.Remove(out.Name()) // TODO: Figure out what to do here.
 			defer out.Close()
 
 			_, err = io.Copy(out, file)

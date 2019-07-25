@@ -40,11 +40,14 @@ int main(int argc, char** argv)
     {
         std::vector<std::string> json_filters = { ".json", ".JSON" };
         auto json_files = GetVideosFromDir(JSON_DIR, json_filters);
+
         std::vector<std::string> vid_filters = { ".mp4", ".MP4" };
         auto video_files = GetVideosFromDir(VIDEO_DIR, vid_filters);
         std::sort(video_files.begin(), video_files.end());
 
         bHasVideos = !video_files.empty() ? true : false;
+
+        if(!bHasVideos) break;
 
         for (size_t i = 0; i < json_files.size(); i++) 
         {
@@ -123,14 +126,11 @@ void TriangulateSelectedPoints(Calibration*& calib)
         Calibration::Input input;
         vector<vector<Point2f> > keypoints_l, keypoints_r;
         {
-            // TODO: Combine the two of these to be read from the same file. This requires the JS post them together.
-            FileStorage fs("calib_config/measure_points_left.yaml", FileStorage::READ);
-            ReadVectorOfVector(fs, "keypoints", keypoints_l);
+            FileStorage fs("calib_config/measure_points.yaml", FileStorage::READ);
+            ReadVectorOfVector(fs, "keypoints_left", keypoints_l);
+            ReadVectorOfVector(fs, "keypoints_right", keypoints_r);
+
             input.image_points[0] = keypoints_l;
-        }
-        {
-            FileStorage fs("calib_config/measure_points_right.yaml", FileStorage::READ);
-            ReadVectorOfVector(fs, "keypoints", keypoints_r);
             input.image_points[1] = keypoints_r;
         }
         

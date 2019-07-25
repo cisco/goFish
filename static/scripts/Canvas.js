@@ -1,19 +1,20 @@
-/// \author Tomas Rigaux
-/// \date May 29, 2019
-///
-/// All of the various tools that can be used on the video canvas are
-/// created here. Each tool is an object which has the ability to be rendered
-/// onto the adjusted video canvas.
+/**
+ * @author Tomas Rigaux
+ * @date May 29, 2019
+ *
+ * @file All of the various tools that can be used on the video canvas are
+ * created here. Each tool is an object which has the ability to be rendered
+ * onto the adjusted video canvas.
+ */
 
 ///////////////////////////////////////////////////////////////////////////////
 // Utility classes
 ///////////////////////////////////////////////////////////////////////////////
 
-/// \class Toolkit
-/// \brief Wrapper class for the various tool classes.
+ /** Wrapper class for the various tool classes. */
 class Toolkit
 {
-    /// Default constructor. Initializes all member variables.
+    /** Default constructor. Initializes all member variables. */
     constructor()
     {
         this.canvas         = $('#adjusted-video');
@@ -24,9 +25,10 @@ class Toolkit
         this.toolButton     = null;
     }
 
-    /// Sets which tool to use via a tool index.
-    /// \param[in] mode The index of the tool to bxe used.
-    /// \param[in, out] button The button object which called this.
+    /** Sets which tool to use via a tool index.
+     * @param {} mode The index of the tool to bxe used.
+     * @param {} button The button object which called this.
+     */
     SetMode(mode, button)
     {
         if(this.mode != -1 && this.mode == mode)
@@ -46,7 +48,7 @@ class Toolkit
             
     }
 
-    /// Utilize the functionalities of the tool at the selected index.
+    /** Utilize the functionalities of the tool at the selected index. */
     UseTool()
     {
         switch(this.mode)
@@ -81,22 +83,18 @@ class Toolkit
         }
     }
 
-    /// Adds a new ruler to the canvas. If the mouse is to the left, it creates
-    /// a left ruler. If it is on the right, a right ruler is created.
+    /** Adds a new ruler to the canvas. If the mouse is to the left, it creates
+     * a left ruler. If it is on the right, a right ruler is created.
+     */
     AddRuler()
     {
-        // TODO: Refactor this and in GoFish.go to respectively submit and receive both rulers simultaneously.
-        function PostResult(ruler, url, x_offset)
+        function PostResult(name, ruler, x_offset)
         {
             var line = ruler.line;
             var sx = (line.start_point.x - x_offset);
             var ex = (line.end_point.x - x_offset);
-            var data = "{ \"P0\" : {\"x\" :" + sx +", \"y\":"+line.start_point.y+"}, \"P1\" : {\"x\" :" + ex + ", \"y\":" + line.end_point.y + "}}";
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", url);
-            xhr.setRequestHeader("Content-Type", "application/json");                
-            xhr.send(data);
+            var data = " \""+name+"\" : { \"P0\" : {\"x\" :" + sx +", \"y\":"+line.start_point.y+"}, \"P1\" : {\"x\" :" + ex + ", \"y\":" + line.end_point.y + "}}";
+            return data;
         }
 
         if(this.mouse.x <= this.canvas.position().left + this.canvas.width()/2)
@@ -104,31 +102,36 @@ class Toolkit
             if(this.left_rulers == null) 
                 this.left_rulers = new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#FF1144");
             this.left_rulers.AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
-            if(this.left_rulers.point_2 != null)
-            {
-                PostResult(this.left_rulers, "/processing/left", 0);
-            }
         }
         else
         {
             if(this.right_rulers == null) 
                 this.right_rulers = new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#40e0d0");
             this.right_rulers.AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
-            if(this.right_rulers.point_2 != null)
-            {
-                PostResult(this.right_rulers, "/processing/right", this.canvas.width() / 2);
-            }
         }
+
+        if(this.left_rulers != null && this.right_rulers != null)
+            if(this.left_rulers.point_2 != null && this.right_rulers.point_2 != null)
+            {
+                var left = PostResult("keypoints_left", this.left_rulers, 0);
+                var right = PostResult("keypoints_right", this.right_rulers, this.canvas.width()/2);
+                var data = "{ " + left + ", " + right + " }";
+
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/processing/");
+                xhr.setRequestHeader("Content-Type", "application/json");                
+                xhr.send(data);
+            }
     }
 
-    /// Clear all rulers off of the screen.
+    /** Clear all rulers off of the screen. */
     ClearRulers()
     {
         if(this.left_rulers != null) this.left_rulers = null;
         if(this.right_rulers != null) this.right_rulers = null;
     }
 
-    /// Renders all in-use tools to the canvas.
+    /** Renders all in-use tools to the canvas. */
     Render()
     {
         var canvas = document.getElementById("adjusted-video");
@@ -137,14 +140,15 @@ class Toolkit
     }
 }
 
-/// \class Mouse
-/// \brief A helper class for storing a mouse object containing the current
-///        position of the cursor on the screen.
+/** \brief A helper class for storing a mouse object containing the current
+ *        position of the cursor on the screen.
+ */
 class Mouse
 {
-    /// Stores the mouse at a given origin.
-    /// \param[in] x The x coordinate of the cursor.
-    /// \param[in] y The y coordinate of the cursor.
+    /** Stores the mouse at a given origin.
+     * @param {} x The x coordinate of the cursor.
+     * @param {} y The y coordinate of the cursor.
+     */
     constructor(x, y)
     {
         this.x = x;
@@ -157,16 +161,17 @@ class Mouse
 // Tools
 ///////////////////////////////////////////////////////////////////////////////
 
-/// \class Ruler
-/// \brief Creates a ruler object, which allows for the dynamic creation of two
-///        points and the line between them.
+/** Creates a ruler object, which allows for the dynamic creation of two
+ * points and the line between them.
+ */
 class Ruler
 {
-    /// Constructor for the beginning point of the ruler. Also defines the 
-    /// colour of the rendered ruler.
-    /// \param[in] x The x coordinate of the origin of the ruler.
-    /// \param[in] y The y coordinate of the origin of the ruler.
-    /// \param[in] colour The colour to render the points and line of the ruler.
+    /** Constructor for the beginning point of the ruler. Also defines the 
+     * colour of the rendered ruler.
+     * @param {} x The x coordinate of the origin of the ruler.
+     * @param {} y The y coordinate of the origin of the ruler.
+     * @param {} colour The colour to render the points and line of the ruler.
+     */
     constructor(x, y, colour="#0011FF")
     {
         this.point_1 = null;
@@ -175,9 +180,10 @@ class Ruler
         this.colour  = colour;
     }
 
-    /// Adds a new point for the ruler.
-    /// \param[in] x The x coordinate of the new point.
-    /// \param[in] y The y coordinate of the new point.
+    /** Adds a new point for the ruler.
+     * @param {} x The x coordinate of the new point.
+     * @param {} y The y coordinate of the new point.
+     */
     AddPoint(x, y)
     {
         if(this.point_1 != null)
@@ -192,8 +198,9 @@ class Ruler
         }
     }
 
-    /// Draws the endpoints and line to the canvas.
-    /// \param[in, out] canvas The canvas on which to draw the ruler.
+    /** Draws the endpoints and line to the canvas.
+     * @param {} canvas The canvas on which to draw the ruler.
+     */
     Render(canvas)
     {
         var context = canvas.getContext('2d');
@@ -211,37 +218,38 @@ class Ruler
 // Render Objects
 ///////////////////////////////////////////////////////////////////////////////
 
-/// \class RenderObject
-/// \brief Base class for all objects which can be rendered onto a canvas.
+/** Base class for all objects which can be rendered onto a canvas. */
 class RenderObject
 {
-    /// Default constructor.
+    /** Default constructor. */
     constructor() {}
 
-    /// Base super class render method.
-    /// \param[in, out] canvas The canvas on which to render the object.
+    /** Base super class render method.
+     * @param {} canvas The canvas on which to render the object.
+     */
     Render(canvas) {}
 }
 
-/// \class Point
-/// \brief Creates a 2D point object, with x and y coordinates in a UV mapping
-///        system.
+/** Creates a 2D point object, with x and y coordinates in a UV mapping
+ * system.
+ */
 class Point extends RenderObject
 {
-    /// Constructor for the origin and radius of the point.
-    /// \param[in] x The x coordinate of the point.
-    /// \param[in] y The y coordinate of the point.
+    /** Constructor for the origin and radius of the point.
+     * @param {} x The x coordinate of the point.
+     * @param {} y The y coordinate of the point.
+     */
     constructor(x, y, r)
     {
         super();
         this.x      = x;
         this.y      = y;
         this.radius = r != null ? r : 2;
-        //console.log("x=", this.x, ", y=", this.y);
     }
 
-    /// Draws the point to the canvas.
-    /// \param[in, out] canvas The canvas on which to render the point.
+    /** Draws the point to the canvas.
+     * @param {} canvas The canvas on which to render the point.
+     */
     Render(canvas)
     {
         var context = canvas.getContext("2d");
@@ -253,13 +261,13 @@ class Point extends RenderObject
     }
 }
 
-/// \class Line
-/// \brief A line between two given points in a UV mapping system.
+/** A line between two given points in a UV mapping system. */
 class Line extends RenderObject
 {
-    /// Default constructor for initializing all member variables.
-    /// \param[in, out] p1 The start point for the line.
-    /// \param[in, out] p2 The end poijt for the line.
+    /** Default constructor for initializing all member variables.
+     * @param {} p1 The start point for the line.
+     * @param {} p2 The end poijt for the line.
+     */
     constructor(p1, p2)
     {
         super();
@@ -267,8 +275,9 @@ class Line extends RenderObject
         this.end_point   = p2;
     }
 
-    /// Renders both endpoints and  the line between them.
-    /// \param[in, out] canvas The canvas on which to render the line.
+    /** Renders both endpoints and  the line between them.
+     * @param {} canvas The canvas on which to render the line.
+     */
     Render(canvas)
     {
         if(this.start_point != null && this.end_point != null)
@@ -289,7 +298,7 @@ class Line extends RenderObject
         }
     }
 
-    /// Gets the length of the vector that is the difference of the endpoints.
+    /** Gets the length of the vector that is the difference of the endpoints. */
     Length()
     {
         if(this.start_point != null && this.end_point != null)

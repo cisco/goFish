@@ -68,3 +68,12 @@ This application uses the Box API to backup files and reduce storage requirement
 Once the project is setup, and all the executables have been created, all that's left is to run the main executable as ```./GoFish <port>```, where ```<port>``` is an open and exposed port. Igf left blank, it will simply run on port 80.
 
 If this is being run on AWS, then run the program as ```./GoFish <port> &```, where ```<port>``` is the port number you exposed in the AWS security groups. The ```&``` will allow the program to run in the background, that way it stays running after you've exited out of the ssh session.
+
+---
+
+##Documentation
+To generate the documentation for all the files, simply run ```./document.sh```. To vist=it the documentation, go to your web browser, and navigate to 
+- C++: ```<your_domain>:<port>/docs/html```
+- JS :```<your_domain>:<port>/docs/js```
+
+There are different URLs for the different languages, as they are documented using different tools.
