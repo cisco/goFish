@@ -327,7 +327,6 @@ void Calibration::UndistortPoints()
 
     for (int i = 0; i < result.n_image_pairs; i++)
     {
-        // TODO: Get better stereo images so that R and P can be used.
         cv::undistortPoints(input.image_points[0][i],
                             result.undistorted_points[0][i],
                             result.CameraMatrix[0],

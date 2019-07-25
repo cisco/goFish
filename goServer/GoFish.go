@@ -98,7 +98,6 @@ func (goFish *GoFish) StartServer() {
 	//folder, _ := goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
 	//log.Println(folder)
 
-	// TODO: Temporary, this shouldn't stay.
 	/*
 		for _, v := range folder.Entries {
 			goFish.box.DeleteFile(v.ID, v.Etag)
@@ -343,14 +342,14 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 		decoder.Decode(&d)
 
 		// Try to open the file. If it doesn't exist, create it, and write a default header.
-		header := []byte("")
+		header := []byte("%YAML:1.0\n---")
 		file, err := os.OpenFile(
-			"calib_config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml",
+			"calib_config/measure_points.yaml",
 			os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			log.Println(err)
 			file, err = os.OpenFile(
-				"calib_config/measure_points_"+strings.TrimPrefix(r.URL.Path, "/processing/")+".yaml",
+				"calib_config/measure_points.yaml",
 				os.O_CREATE|os.O_WRONLY, 0600)
 			if err != nil {
 				log.Println(err)
@@ -359,38 +358,34 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 			}
 		}
 
-		// Check to see if this file already contains data.
-		temp, err := ioutil.ReadFile("calib_config/measure_points_" + strings.TrimPrefix(r.URL.Path, "/processing/") + ".yaml")
-		s := string(temp)
-		name := "\nkeypoints:"
-		if !strings.Contains(s, name) {
-			file.Write([]byte(name))
-		}
-
 		// Build the formatted string of points to insert into the YAML file.
 		outVector := ""
 		for k, v := range d.(map[string]interface{}) {
-			keys := make([]string, 0, len(v.(map[string]interface{})))
-			if v != nil {
-				for k := range v.(map[string]interface{}) {
-					keys = append(keys, k)
-				}
-				sort.Strings(keys)
-				m := v.(map[string]interface{})
-				outVector += "\n\u0020\u0020\u0020" + k + ": [ "
-				for i, k := range keys {
-					outVector += fmt.Sprintf("%.6f", (m[k].(float64)))
-					if i != len(keys)-1 {
-						outVector += ", "
+			name := "\n" + k + ":"
+			outVector += name
+			for k, v := range v.(map[string]interface{}) {
+				keys := make([]string, 0, len(v.(map[string]interface{})))
+				if v != nil {
+					for k := range v.(map[string]interface{}) {
+						keys = append(keys, k)
 					}
+					sort.Strings(keys)
+					m := v.(map[string]interface{})
+					outVector += "\n\u0020\u0020\u0020" + k + ": [ "
+					for i, k := range keys {
+						outVector += fmt.Sprintf("%.6f", (m[k].(float64)))
+						if i != len(keys)-1 {
+							outVector += ", "
+						}
+					}
+					outVector += "]\u0020\u0020\u0020"
 				}
-				outVector += "]\u0020\u0020\u0020"
 			}
 		}
 		outVector = strings.TrimRight(outVector, ",")
 		outVector += ""
 
-		file.WriteAt([]byte(outVector), 24)
+		file.WriteAt([]byte(outVector), 13)
 
 		goFish.RunProcess("./FishFinder", "TRIANGULATE")
 

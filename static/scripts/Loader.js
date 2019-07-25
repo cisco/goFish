@@ -1,9 +1,11 @@
-/// \author Tomas Rigaux
-/// \date May 16, 2019
-///
-/// Loader.js handles most of the jQuery related commands that help keep
-/// the page Asynchronous with loading in new information from the server-side
-/// Go template code.
+/**
+ * @author Tomas Rigaux
+ * @date May 16, 2019
+ *
+ * @file Loader.js handles most of the jQuery related commands that help keep
+ * the page Asynchronous with loading in new information from the server-side
+ * Go template code.
+ */
 
 ///////////////////////////////////////////////////////////////////////////////
 // Setup global variables
@@ -19,7 +21,7 @@ var playing = false;
 // Loading Methods
 ///////////////////////////////////////////////////////////////////////////////
 
-/// Run when the document is first loaded.
+/** Run when the document is first loaded. */
 $(function(){
     // Init jQuery events.
     {
@@ -75,7 +77,7 @@ $(function(){
     setTimeout(LoadAll, 1000);
 });
 
-/// Runs after every completed AJAX request.
+/** Runs after every completed AJAX request. */
 $(document).ajaxComplete(function(){
     $(".file-item").on("click", function(e){
         e.preventDefault();
@@ -90,8 +92,9 @@ $(document).ajaxComplete(function(){
 // Helper Loading methods
 ///////////////////////////////////////////////////////////////////////////////
 
-/// Loads all necessary video processing objects with data obtained from the 
-/// server.
+/** Loads all necessary video processing objects with data obtained from the 
+ * server.
+ */
 function LoadAll()
 {
     // Reinitialize variables.
@@ -112,8 +115,9 @@ function LoadAll()
     
 }
 
-/// Refreshes specific elements on the oage to update them with new content.
-/// \param [in] e The page event object.
+/** Refreshes specific elements on the oage to update them with new content.
+ * @param {Event} e The page event object.
+ */
 function Refresh(e){
     e.preventDefault();
 
@@ -166,8 +170,9 @@ function Refresh(e){
     setTimeout(LoadAll, 1000);
 }
 
-/// Submits multipart file forms using AJAX.
-/// \param[in] forms The IDs of all the forms that use this to be submitted.
+/** Submits multipart file forms using AJAX.
+ * @param {string} forms The IDs of all the forms that use this to be submitted (comma separated).
+ */
 function SubmitMultipartForms(forms)
 {
     $(forms).on("submit", function(e){
@@ -196,7 +201,7 @@ function SubmitMultipartForms(forms)
     });
 }
 
-/// Sets up functionality for the toolbar.
+/** Sets up functionality for the toolbar. */
 function HandleTools()
 {
     $(document).mousemove(function(e){
@@ -209,7 +214,7 @@ function HandleTools()
     });
 }
 
-/// Redraws the main video and scrubber bar canvases.
+/** Redraws the main video and scrubber bar canvases. */
 function Redraw()
 {
     videoHandler.draw();
@@ -222,7 +227,7 @@ function Redraw()
 // Video Control methods
 ///////////////////////////////////////////////////////////////////////////////
 
-/// Starts playing all video handling elements.
+/** Starts playing all video handling elements. */
 function Play()
 {
     if(videoHandler.video != null)
@@ -242,7 +247,7 @@ function Play()
     }
 }
 
-/// Pauses all video handling elements.
+/** Pauses all video handling elements. */
 function Pause()
 {
     if(videoHandler.video != null)
@@ -252,7 +257,7 @@ function Pause()
     }
 }
 
-/// Seeks back 1 second of the video.
+/** Seeks back 1 second of the video. */
 function SeekBack()
 {
     if(videoHandler.video != null)
@@ -266,7 +271,7 @@ function SeekBack()
     }
 }
 
-/// Seeks forward 1 second of the video.
+/** Seeks forward 1 second of the video. */
 function SeekForward()
 {
     if(videoHandler.video != null)

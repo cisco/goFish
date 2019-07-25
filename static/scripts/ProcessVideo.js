@@ -1,21 +1,23 @@
-/// \author Tomas Rigaux
-/// \date May 8, 2019
-///
-/// This is where the meat of the operations happen. All video related
-/// handlers are defined here. Each is meant to handle different tasks relating
-/// to how the video is displayed and is interacted with in browser. Basically,
-/// this is where the video is modified so as to reduce the amount of work 
-/// required by users to interact with it.
+/** 
+ * @author Tomas Rigaux
+ * @date May 8, 2019
+ *
+ * @file This is where the meat of the operations happen. All video related
+ * handlers are defined here. Each is meant to handle different tasks relating
+ * to how the video is displayed and is interacted with in browser. Basically,
+ * this is where the video is modified so as to reduce the amount of work 
+ * required by users to interact with it.
+ */
 
-/// The known framerate of the video.
+/** The known framerate of the video. */
 let FRAMERATE = 30;
 
-/// \class VideoHandler
-/// \brief Handles the modified video controls to keep the main canvas video
-///        the custom scrubber bar.
+/** Handles the modified video controls to keep the main canvas video the
+ * custom scrubber bar. 
+ */
 class VideoHandler
 {
-    /// Default constructor for initializing all member variables.
+    /** Default constructor for initializing all member variables. */
     constructor() 
     {
         this.video      = document.getElementById("selected");
@@ -43,8 +45,7 @@ class VideoHandler
         this.draw();
     }
 
-    /// Allows the video to be drawn to the canvas if the video is not ended or
-    /// paused.
+    /** Allows the video to be drawn to the canvas if the video is not ended or paused. */
     run()
     {
         if(this.video != null)
@@ -56,8 +57,7 @@ class VideoHandler
         }
     }
 
-    /// Draws the canvas to the screen, and calculates whether or not the
-    /// scrubber bar is keeping up.
+    /** Draws the canvas to the screen, and calculates whether or not the scrubber bar is keeping up. */
     draw()
     {
         if(this.canvas != null)
@@ -88,14 +88,14 @@ class VideoHandler
         }
     }
 
-    /// Pauses the video and the canvas drawing.
+    /** Pauses the video and the canvas drawing. */
     pause()
     {
         if(this.video != null)
             this.video.pause();
     }
 
-    /// Plays the video and adjusts the scrubber bar accordingly.
+    /** Plays the video and adjusts the scrubber bar accordingly. */
     play()
     {
         if(this.video != null)
@@ -109,9 +109,9 @@ class VideoHandler
         }
     }
 
-    /// Adjusts the video's current time by the difference converted from
-    /// frames.
-    /// \param[in] diff The difference in frames to adjust the video by.
+    /** Adjusts the video's current time by the difference converted from frames. 
+     * @param {number} diff The difference in frames to adjust the video by.
+     */
     adjustVideo(diff)
     {
         var self = this;
@@ -123,14 +123,15 @@ class VideoHandler
     }
 }
 
-/// \class JsonHandler
-/// \brief Gets the JSON from the GO server fed to the page, decodes it, and
-///        extracts all the event data from it.
+/** Gets the JSON from the Go server fed to the page, decodes it, and extracts
+ * all the event data from it. 
+ */
 class JsonHandler
 {
-    /// Creates the new object with the collected JSON data and tag.
-    /// \param[in] tag The video tag name.
-    /// \param[in, out] video The video to reference.
+    /** Creates the new object with the collected JSON data and tag.
+     * @param {string} tag The video tag name.
+     * @param {string} video The video to reference.
+     */
     constructor(tag, video)
     {
         this.handle = tag != null || (tag != "" && tag != "{}") ? JSON.parse(atob(tag)) : null;
@@ -146,7 +147,9 @@ class JsonHandler
         }
     }
 
-    /// Finds the QR code event and returns it as a formatted event.
+    /** Finds the QR code event and returns it as a formatted event. 
+     * @return {JSON} The QR event as JSON.
+     */
     Event_QRCode()
     {
         function QR(e){return e["Event_QRCode"];}
@@ -157,9 +160,10 @@ class JsonHandler
         return null;
     }
 
-    /// Finds all activity events and returns them as an array of formatted
-    /// event objects.
-    /// \param[in] id The ID of the event to choose from the array.
+    /** Finds all activity events and returns them as an array of formatted
+     * event objects.
+     * @param {number} id The ID of the event to choose from the array.
+     */
     Event_Activity(id)
     {
         if(this.handle != null)
@@ -172,12 +176,10 @@ class JsonHandler
     }
 }
 
-/// \class EventHandler
-/// \brief Handles the rendering of the extracted JSON events into the
-///        scrubber bar.
+/** Handles the rendering of the extracted JSON events into the scrubber bar. */
 class EventHandler
 {
-    /// Default constructor. Initializes all member variables.
+    /** Default constructor. Initializes all member variables. */
     constructor()
     {
         this.canvas = document.getElementById("event-time-bar");
@@ -185,16 +187,17 @@ class EventHandler
         this.event_index = 0;
     }
 
-    /// A wrapper for the draw method to keep with naming convention.
+    /** A wrapper for the draw method to keep with naming convention. */
     run()
     {
         this.draw();
     }
 
-    /// Defines how to draw a line on the scrubber bar canvas.
-    /// \param[in] start The starting frame of the line area.
-    /// \param[in] end The ending frame of the line area.
-    /// \param[in] colour The colour to draw the line.
+    /** Defines how to draw a line on the scrubber bar canvas.
+     * @param {number} start The starting frame of the line area.
+     * @param {number} end The ending frame of the line area.
+     * @param {string} colour The colour to draw the line.
+     */
     drawLine(start, end, colour)
     {
         if(this.canvas != null)
@@ -210,8 +213,9 @@ class EventHandler
         }
     }
 
-    /// Draws all the events as colourful sections on the scrubber bar, as well
-    /// as draws the current position of the video as a white line on top.
+    /** Draws all the events as colourful sections on the scrubber bar, as well
+     * as draws the current position of the video as a white line on top.
+     */
     draw()
     {
         if(this.canvas != null)
@@ -247,9 +251,10 @@ class EventHandler
         }
     }
 
-    /// Adds an event to the array of events.
-    /// \param[in] start The starting frame of the event.
-    /// \param[in] end The ending frame of the event.
+    /** Adds an event to the array of events.
+     * @param {number} start The starting frame of the event.
+     * @param {number} end The ending frame of the event.
+     */
     addEvent(start, end)
     {
         this.events.push(new Event(start, end));
@@ -257,22 +262,23 @@ class EventHandler
     }
 }
 
-/// \class Event
-/// \brief An event object which holds information on the adjusted start and
-///        end times.
+/** An event object which holds information on the adjusted start and
+ * end times.
+ */
 class Event
 {
-    /// Constructs an event within a given start and end range.
-    /// \param[in] start The starting frame of the event.
-    /// \param[in] end The ending frame of the event.
+    /** Constructs an event within a given start and end range.
+     * @param[in] start The starting frame of the event.
+     * @param[in] end The ending frame of the event.
+     */
     constructor(start, end)
     {
         this.frame_start = start;
         this.frame_end = end;
-        this.colour = this.getRandomColour();
+        this.colour = "#64BBE3";
     }
 
-    /// Creates a random RGB colour for the event to be drawn as.
+    /** Creates a random RGB colour for the event to be drawn as. */
     getRandomColour() 
     {
         var letters = '0123456789ABCDEF';
@@ -280,8 +286,7 @@ class Event
         for (var i = 0; i < 6; i++) {
             colour += letters[Math.floor(Math.random() * 16)];
         }
-        //return colour;
-        return "#64BBE3";
+        return colour;
     }
 }
 
