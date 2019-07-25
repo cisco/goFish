@@ -1,7 +1,7 @@
 PROJECT_PATH=~
 
-sudo spt-get install doxygen
-sudo apg-tget install npm
+sudo apt-get install doxygen
+sudo apt-get install npm
 npm install -g jsdoc
 
 cd $PROJECT_PATH/goFish/
