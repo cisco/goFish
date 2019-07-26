@@ -230,6 +230,23 @@ func (s *Server) AddProcess(p *Process) {
 
 // GetProcesses : Returns a pointer to the list of processes running on the server.
 func (s *Server) GetProcesses() []*Process {
+	// Remove processes marked for death.
+	go func() {
+		for {
+			time.Sleep(time.Second * 10)
+			a := s.Processes
+			for i, v := range s.Processes {
+				if v.Status == "dead" {
+					a[i] = a[len(a)-1]
+					a = a[:len(a)-1]
+					break
+				}
+			}
+			s.Processes = a
+		}
+	}()
+
+	// Check to see if processes are still running. If they aren't, mark them.
 	for _, v := range s.Processes {
 		p, err := os.FindProcess(v.ID)
 		if err != nil {
@@ -237,7 +254,6 @@ func (s *Server) GetProcesses() []*Process {
 		} else {
 			err = p.Signal(syscall.Signal(0))
 			if err != nil {
-				// TODO: Mark for removal.
 				v.Status = "dead"
 			}
 		}

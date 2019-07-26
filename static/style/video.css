@@ -13,15 +13,25 @@
     grid-column: 2 / 12;
     grid-row: 1;
 }
+#main-video > .panel-body{
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: minmax(1em, auto);
+}
 #adjusted-video {
     background: #111111 ;
+    grid-column: span 12;
+}
+#adjusted-time {
+    grid-column: span 12;
 }
 #event-time-bar {
-    background: #222222;
+    background: #191919;
     width: 100%;
     height: 2em;
     border-radius: 5px;
     border: 1px solid #57585b;
+    grid-column: span 12;
 }
 /* End Video Related */
 
@@ -36,6 +46,8 @@ button.active {
 #controls {
     display: flex;
     justify-content: center;
+    height: 2em;
+    grid-column: 6 / 8;
 }
 #controls > button:first-child {
     background: #049FD9;
@@ -68,12 +80,13 @@ button.active {
 
 /* Toolkit */
 #tools {
-    position: relative;
+    grid-column: 12;
     height: 2em;
+    
 }
 .toolbar {
     display: flex;
-    margin: -1em;
+    justify-content: flex-end;
 }
 .toolbar > button:first-child {
     background: #049FD9;
@@ -108,9 +121,16 @@ button.active {
 
 /* Info Panel */
 #info-panel {
-    position: relative;
+    position: absolute;
     height: inherit;
     text-align: left;
+    margin: 10px;
+    padding: 1em;
+    min-width: 200px;
+    border-radius: 10px;
+    color: #FFFFFF;
+    background: rgba(34, 34, 34, 0.9);
+    box-shadow: 1px 1px rgba(0,0,0,0.2);
 }
 #info-panel > .panel-body {
     overflow-y: scroll;
@@ -118,6 +138,20 @@ button.active {
 }
 #info-panel > .panel-header:hover {
     cursor: move;
+}
+#info-panel::before {
+    content: " ";
+    position: absolute;
+    z-index: 0;
+    width: 0; 
+    height: 0; 
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid rgba(34, 34, 34, 0.9);
+    margin: 0;
+    padding: 0;
+    top: -10px;
+    left: 10px;
 }
 /* End Info Panel */
 

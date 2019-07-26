@@ -114,46 +114,34 @@
         <!-- Adjusted Video drawn to Canvas -->
         <div id="main-video" class="panel">
             <div class="panel-body">
+                
                 <canvas id="adjusted-video" width="1066" height="400"></canvas>
-                <br>
                 <canvas id="event-time-bar" width="4000" height="40"></canvas>
-                <br>
                 <div id="adjusted-time"></div>
                 <div id="controls">
                     <button onclick="SeekBack()"><i class="material-icons">&#xe045;</i></button>
                     <button id="play-pause"><i class="material-icons">&#xe037;</i></button>
                     <button onclick="SeekForward()"><i class="material-icons">&#xe044;</i></button>
+                </div><!-- Toolbar -->
+                <div id="tools" class="toolbar">
+                    <button id="ruler" onclick="toolkit.SetMode(0, this)"><i class="material-icons">&#xe41c;</i></button>
+                    <button id="clear-ruler" onclick="toolkit.SetMode(1, this)"><i class="material-icons">&#xe888;</i></button>
                 </div>
             </div>
         </div>
         
-        <!-- Info and tools -->
-        <div id="info-tools" class="panel">
-            <!-- Info Panel -->
-            <div id="info-panel" class="panel">
-                <!-- Toolbar -->
-                <div id="tools" class="panel">
-                    <div class="panel-body">
-                        <div class="toolbar">
-                            <button id="ruler" onclick="toolkit.SetMode(0, this)"><i class="material-icons">&#xe41c;</i></button>
-                            <button id="clear-ruler" onclick="toolkit.SetMode(1, this)"><i class="material-icons">&#xe888;</i></button>
-                        </div>
-                    </div>
-                </div>
-                <div class="panel-body">
-                    <code>
-                        {{if .PointInfo}}
-                        <label>Length:</label><span id="length"></span><br>
-                        <span id="world-points" hidden> 
-                        {{range $i , $p := .PointInfo.Points}}
-                            <span class="points">{{ $p }}</span><br>
-                        {{end}}
-                        </span>
-                        {{end}}
-                    </code>
-                </div>
-            </div>
-
+        <!-- Info Panel -->
+        <div id="info-panel" hidden>
+            <form>
+                {{if .PointInfo}}
+                <label>Length:</label><input id="length" type="url" readonly><br>
+                <span id="world-points" hidden> 
+                {{range $i , $p := .PointInfo.Points}}
+                    <span class="points">{{ $p }}</span><br>
+                {{end}}
+                </span>
+                {{end}}
+            </form>
         </div>
 
         {{if .PageInfo.VideosLoaded}}

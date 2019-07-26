@@ -14,6 +14,7 @@ body {
 
 /* Navbar */
 .navbar {
+    z-index: 3;
     display: flex;
     margin: 0;
     max-width: 100%;
@@ -88,16 +89,17 @@ body {
 
 /* Panel */
 .panel {
+    display: inline-block;
     margin: 10px;
     padding: 0;
     border-radius: 10px;
-    border: 1px solid #57585b;
     color: #FFFFFF;
-    overflow: hidden;
     box-shadow: 1px 1px rgba(0,0,0,0.2);
+    height: auto;
 }
 .panel-header{
     display: flex;
+    border-radius: inherit;
     background: linear-gradient(#097DBC, #049FD9 );
     padding: 0.5em;
     color: #EFEFEF;
@@ -105,6 +107,9 @@ body {
     font-size: 1em;
 }
 .panel-body {
+    border: 1px solid #57585b;
+    border-radius: inherit;
+    box-sizing: content-box;
     background: #343537;
     padding: 1em;
     height: 100%;
@@ -217,6 +222,7 @@ input[type="file"] + label {
 .sidenav {
     height: 80%;
     width: 203px;
+    z-index: 1000;
     display: none;
     position: absolute;
     overflow: scroll;
