@@ -44,10 +44,6 @@ $(function(){
     // Startup timers.
     {
         setInterval(function(){
-            $("#world-points").load(window.location.href + " #world-points > * "); 
-        }, 1000);
-
-        setInterval(function(){
             $("#files").load(window.location.href + " #files > *");
             $("#processes").load(window.location.href + " #processes > *");
         }, 5000);
@@ -76,6 +72,11 @@ $(function(){
 
     setTimeout(LoadAll, 1000);
 });
+
+$(window).resize(function(){
+    $("#adjusted-video").attr("width", $("#adjusted-video").parent().width());
+    $("#adjusted-video").attr("height", ($("#adjusted-video").attr("width") / 8 * 3));
+})
 
 /** Runs after every completed AJAX request. */
 $(document).ajaxComplete(function(){

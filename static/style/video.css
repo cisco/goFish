@@ -10,7 +10,7 @@
 #main-video {
     display: inline-block;
     text-align: center;
-    grid-column: 2 / 12;
+    grid-column: 1 / 13;
     grid-row: 1;
 }
 #main-video > .panel-body{
