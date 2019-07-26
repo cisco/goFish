@@ -8,10 +8,10 @@ if [ $1 = "FULL" ]; then
     ## Linux
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
         sudo apt-get update
-        sudo apt-get install cmake
-        sudo apt-get install gcc
-        sudo apt-get install g++
-        sudo apt-get install golang-go
+        sudo apt-get -y install cmake
+        sudo apt-get -y install gcc
+        sudo apt-get -y install g++
+        sudo apt-get -y install golang-go
     ## Mac OSX
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         brew update
@@ -22,8 +22,8 @@ fi
 ## Install Opencv 4.1
 if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
-        sudo apt-get install build-essential
-        sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+        sudo apt-get -y install build-essential
+        sudo apt-get -y install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
     fi
     ## Get OpenCV git repos.
     cd ~ || exit

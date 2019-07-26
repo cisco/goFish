@@ -76,7 +76,7 @@ class Toolkit
                 vectors[1] = (points[1].innerHTML.replace("[", "").replace("]", "").split(" "));
 
                 length = Math.sqrt(Math.pow(vectors[1][0] - vectors[0][0], 2) + Math.pow(vectors[1][1] - vectors[0][1], 2) + Math.pow(vectors[1][2] - vectors[0][2], 2));
-                outputLen.innerHTML = length;
+                outputLen.value = length;
             }
             // Reload the canvas to show rulers.
             this.canvas.load(window.location.href + " #adjusted-video > *");
@@ -121,6 +121,8 @@ class Toolkit
                 xhr.open("POST", "/processing/");
                 xhr.setRequestHeader("Content-Type", "application/json");                
                 xhr.send(data);
+
+                $("#info-panel").show().css({top:this.mouse.y, left: this.mouse.x-30});
             }
     }
 

@@ -95,14 +95,15 @@ func (goFish *GoFish) StartServer() {
 	goFish.server.BuildHTMLTemplate("static/videos.html", "/processing/", goFish.HandleRulerHTML)
 	goFish.server.Box = goFish.box
 
-	//folder, _ := goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
-	//log.Println(folder)
+	/* This is for clearing out folders. It should be removed at some point.
+	folder, _ := goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
+	log.Println(folder)
 
-	/*
-		for _, v := range folder.Entries {
-			goFish.box.DeleteFile(v.ID, v.Etag)
-		}
+	for _, v := range folder.Entries {
+		goFish.box.DeleteFile(v.ID, v.Etag)
+	}
 	*/
+
 	handler := &http.Server{Addr: addr, Handler: goFish.server}
 
 	go func() {
@@ -205,17 +206,16 @@ func (goFish *GoFish) RunProcess(instr string, args ...string) {
 // Client-side functions.
 ///////////////////////////////////////////////////////////////////////////////
 
-// VideoInfo : Structure that holds information about a video, which is passed
-// to HTML.
-type VideoInfo struct {
-	Name string
-	Tag  string
-	JSON string
-}
-
 // HandleVideoHTML : Returns the names of videos selected in browser. If no
 // files were selected, then try to upload the files.
 func (goFish *GoFish) HandleVideoHTML(r *http.Request) interface{} {
+	// VideoInfo : Structure that holds information about a video, which is passed
+	// to HTML.
+	type VideoInfo struct {
+		Name string
+		Tag  string
+		JSON string
+	}
 	if r.Method == "POST" || goFish.video != "" {
 		decoder := json.NewDecoder(r.Body)
 		var d interface{}
@@ -387,6 +387,8 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 
 		file.WriteAt([]byte(outVector), 13)
 
+		// FIXME: This is BAD. Need to find a way to wrap this in C and GO
+		// to be called directly in Go, rather than a hacky c++ method.
 		goFish.RunProcess("./FishFinder", "TRIANGULATE")
 
 	}
@@ -409,7 +411,7 @@ func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
 
 		// IDName : Struct with a combo of ID and Name.
 		type IDName struct {
-			Id   int
+			ID   int
 			Name string
 		}
 

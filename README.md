@@ -72,8 +72,8 @@ If this is being run on AWS, then run the program as ```./GoFish <port> &```, wh
 ---
 
 ##Documentation
-To generate the documentation for all the files, simply run ```./document.sh```. To vist=it the documentation, go to your web browser, and navigate to 
-- C++: ```<your_domain>:<port>/docs/html```
-- JS :```<your_domain>:<port>/docs/js```
+To generate the documentation for all the files, simply run ```./document.sh```. To vistit the documentation, go to your web browser, and navigate to 
+- C++: ```<your_domain>:<port>/static/docs/html```
+- JS :```<your_domain>:<port>/static/docs/js```
 
 There are different URLs for the different languages, as they are documented using different tools.
