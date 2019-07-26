@@ -123,6 +123,7 @@ class Toolkit
                 xhr.send(data);
 
                 $("#info-panel").show().css({top:this.mouse.y, left: this.mouse.x-30});
+                setTimeout(function(){$("#world-points").load(window.location.href + " #world-points > * ")}, 3000);
             }
     }
 
