@@ -69,14 +69,18 @@ if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
     rm -r ~/opencv*
 fi
 
-## Compile the project.
+## Go to the project.
 cd $PROJECT_DIRECTORY/goFish || exit
-cd static/ || exit
-mkdir temp
-mkdir videos
-mkdir video-info
-mkdir proc_videos
-cd ../ || exit
+
+if [ $1 = "FULL" ]
+    cd static/ || exit
+    mkdir temp
+    mkdir videos
+    mkdir video-info
+    mkdir proc_videos
+    mkdir calibrate
+    cd ../ || exit
+fi
 
 ## Install Go project dependencies.
 go get github.com/dgrijalva/jwt-go
@@ -84,20 +88,7 @@ go get github.com/fatih/structs
 go get github.com/go-yaml/yaml
 go get github.com/mitchellh/mapstructure
 
-## Build Go
-cd goServer || exit
-go build
-cd .. || exit
-
-## Build C++
-cd findFish || exit
-mkdir build
-cd build || exit
-cmake .. && make -j7 && cd ../..
-
-cd CameraCalibration || exit
-mkdir build
-cd build || exit
-cmake .. && make -j7 && cd ../..
+## Build all components.
+./build.sh
 
 

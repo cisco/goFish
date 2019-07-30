@@ -5,7 +5,7 @@ An open source project for using stereo vision to Identify, Count, and Measure f
 
 ## Getting Started
 If you are setting up on a local machine, then skip to step 2.
-1. Get setup on AWS, and create an EC2 instance (any distribution will do), and make sure it has enough storage and memory (minimum of 16GB and 8GB respectively should be fine). Then, SSH into the instance.
+1. Get setup on AWS, and create an EC2 Ubuntu instance, and make sure it has enough storage and memory (minimum of 16GB and 8GB respectively should be fine). Then, SSH into the instance.
 2. To get started with the project, clone this repo to your favourite project directory:
     ```bash
     cd ~/<project_directory>
@@ -16,8 +16,8 @@ If you are setting up on a local machine, then skip to step 2.
 ---
 
 ## Setup
-#### Build
-To setup the project, simply take a look at ```setup.sh```. If you are setting up on a new system, then you will need to run the full setup, or at least install OpenCV. Otherwise, you may can just build the project itself.
+#### Dependencies
+To set up the project, simply take a look at ```setup.sh```. If you are setting up on a new system, then you will need to run the full setup, or at least install OpenCV. Otherwise, you can just build the project itself.
 
 First, check the constants are correct (modify them as needed, though OpenCV version should NOT be lower than 4.0.0)
 ```bash
@@ -30,9 +30,12 @@ Once you are satisfied with the above, then you'll need to run the setup.
 - Install OpenCV: ```./setup.sh OPENCV``` (installs the specified version of opencv)
 - Regular Setup : ```./setup.sh```
 
+#### Build
+If you ran the ```setup.sh``` script then you don't need to worry about this part. If you did not need to install any of the extra dependencies mentioned above, then to build all components of the project run ```./build.sh``` from the main project directory. This will build all Go files and compile all C++ files.
+
 #### Box
 This application uses the Box API to backup files and reduce storage requirements on the server itself. Thus, to use the service, we need to setup an authentication process with our Box App.
-1. Create a Box app at https://developer.box.com/.
+1. Create a Box app at https://developer.box.com/ (**DON'T FORGET TO AUTHORIZE THE APP IN THE ADMIN CONSOLE**).
 2. Open up your newly created Box app, and go to **Configuration**. Here, you need to change **Application Access** from "Application" to "Enterprise".
 3. Generate private and public RSA keys using openssl:
     ```bash
@@ -65,14 +68,14 @@ This application uses the Box API to backup files and reduce storage requirement
 ---
 
 ## Run the Application
-Once the project is setup, and all the executables have been created, all that's left is to run the main executable as ```./GoFish <port>```, where ```<port>``` is an open and exposed port. Igf left blank, it will simply run on port 80.
+Once the project is setup, and all the executables have been created, all that's left is to run the main executable as ```./GoFish <port>```, where ```<port>``` is an open and exposed port. If left blank, it will simply run on port 80.
 
 If this is being run on AWS, then run the program as ```./GoFish <port> &```, where ```<port>``` is the port number you exposed in the AWS security groups. The ```&``` will allow the program to run in the background, that way it stays running after you've exited out of the ssh session.
 
 ---
 
-##Documentation
-To generate the documentation for all the files, simply run ```./document.sh```. To vistit the documentation, go to your web browser, and navigate to 
+## Documentation
+To generate the documentation for all the files, simply run ```./document.sh```. To visit the documentation, go to your web browser, and navigate to 
 - C++: ```<your_domain>:<port>/static/docs/html```
 - JS :```<your_domain>:<port>/static/docs/js```
 
