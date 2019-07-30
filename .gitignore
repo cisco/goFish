@@ -34,13 +34,19 @@
 # Extra files
 .DS_Store
 *.yaml
+*.mp4
+*.MP4
+*.jpg
+*.JPG
+*.png
+*.PNG
 
 # Extra Folders
 .vscode/
+docs/
+private_config/
 static/videos/
 static/video-info/
 static/proc_videos/
 static/temp/
 static/calibrate/
-docs/
-private_config/
