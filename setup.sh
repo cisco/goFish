@@ -72,7 +72,7 @@ fi
 ## Go to the project.
 cd $PROJECT_DIRECTORY/goFish || exit
 
-if [ $1 = "FULL" ] then
+if [ $1 = "FULL" ]; then
     cd static/ || exit
     mkdir temp
     mkdir videos
