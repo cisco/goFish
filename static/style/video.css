@@ -3,6 +3,13 @@
     font-size: 1.5em !important;
 }
 
+#upload-files + label {
+    padding: .5em 1em;
+    margin-bottom: 1em;
+    font-size: 0.7em;
+    display: inline-block;
+}
+
 /* Video Related */ 
 #videos {
     grid-column: 3 / 11;
@@ -124,7 +131,7 @@ button.active {
     position: absolute;
     height: inherit;
     text-align: left;
-    margin: 10px;
+    margin: 15px 10px;
     padding: 1em;
     min-width: 200px;
     border-radius: 10px;
@@ -153,11 +160,19 @@ button.active {
     top: -10px;
     left: 10px;
 }
+#length {
+    background: none;
+    border: none;
+    color: inherit;
+    font-style: inherit;
+    font-size: inherit;
+}
 /* End Info Panel */
 
-#info-tools {
+/* Camera */
+.camera {
     display: flex;
-    align-items: center;
-    grid-column: 2 / 12;
-    grid-row: 2;
+    width: 100%;
+    margin-bottom: 1em;
 }
+/* End Camera */
