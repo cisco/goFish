@@ -22,19 +22,17 @@ using namespace cv;
 
 void HandleSignal(int);
 std::vector<std::string> GetVideosFromDir(std::string, std::vector<std::string>);
-cv::Mat ConcatenateMatrices(cv::Mat&, cv::Mat&);
-void TriangulateSelectedPoints(Calibration*&);
-void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
 
 int main(int argc, char** argv)
 {
     signal(SIGABRT, HandleSignal);
     signal(SIGINT, HandleSignal);
 
-    useOptimized();
     setUseOptimized(true);
 
     bool bHasVideos = false;
+    
+    auto processor = std::make_unique<Processor>();
 
     do 
     {
@@ -63,9 +61,6 @@ int main(int argc, char** argv)
         }
         std::sort(video_files.begin(), video_files.end());
 
-        // FIXME: Doesn't need to be unique.
-        auto p = std::make_unique<Processor>("", "");
-
 #ifdef THREADED
         std::vector<std::thread> threads;
         threads.resize(video_files.size());
@@ -79,19 +74,20 @@ int main(int argc, char** argv)
 #else
         if(argv[1] == NULL)
             for (size_t i = 0; i < video_files.size() / 2; i += 2)
-                p->ProcessVideos(video_files[i], video_files[(i + 1) % video_files.size()]);
+                processor->ProcessVideos(video_files[i], video_files[(i + 1) % video_files.size()]);
 #endif
-    //    if(video_files.size() > 1)
-     //       for(std::string video  : video_files)
-      //          std::remove(video.c_str());
-            
+        /*
+        if (video_files.size() > 1)
+            for (std::string video : video_files)
+                std::remove(video.c_str());
+        */
+
     } while (bHasVideos);
 
+    // FIXME: This is very hacky, and should not stay. 
+    // See https://github.com/cisco/goFish/projects/1#card-24603535 for possible solution.
     if(argv[1] != NULL)
-    {
-        Calibration *calib = nullptr;
-        TriangulateSelectedPoints(calib);
-    }
+        processor->TriangulatePoints("calib_config/measure_points.yaml", "StereoCalibration.yaml");
 
     return 0;
 }
@@ -117,43 +113,4 @@ std::vector<std::string> GetVideosFromDir(std::string dir, std::vector<std::stri
         closedir(dp);
     }
     return video_files;
-}
-
-void TriangulateSelectedPoints(Calibration*& calib)
-{
-    // Get keypoints saved from browser.
-    {
-        Calibration::Input input;
-        vector<vector<Point2f> > keypoints_l, keypoints_r;
-        {
-            FileStorage fs("calib_config/measure_points.yaml", FileStorage::READ);
-            ReadVectorOfVector(fs, "keypoints_left", keypoints_l);
-            ReadVectorOfVector(fs, "keypoints_right", keypoints_r);
-
-            input.image_points[0] = keypoints_l;
-            input.image_points[1] = keypoints_r;
-        }
-        
-        if(input.image_points[0].size() ==  input.image_points[0].size())
-        {
-            calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
-            calib->ReadCalibration();
-            calib->TriangulatePoints();
-        }  
-    }
-}
-
-void ReadVectorOfVector(FileStorage& fs, string name, vector<vector<Point2f> >& data)
-{
-    data.clear();
-    FileNode fn = fs[name];
-    if (fn.empty())
-        return;
-
-    for (auto node : fn) 
-    {
-        vector<Point2f> temp_vec;
-        node >> temp_vec;
-        data.push_back(temp_vec);
-    }
 }
