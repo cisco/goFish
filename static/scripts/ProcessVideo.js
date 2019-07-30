@@ -275,7 +275,7 @@ class Event
     {
         this.frame_start = start;
         this.frame_end = end;
-        this.colour = "#64BBE3";
+        this.colour = "#8054c8";
     }
 
     /** Creates a random RGB colour for the event to be drawn as. */

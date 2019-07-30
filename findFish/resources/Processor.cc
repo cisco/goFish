@@ -12,8 +12,9 @@
 // Forward Declarations
 ///////////////////////////////////////////////////////////////////////////////
 cv::Mat ConcatenateMatrices(cv::Mat&, cv::Mat&);
+void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
 
-Processor::Processor(std::string left_file, std::string right_file)
+Processor::Processor()
     : frame_num_{0}, total_frames_{-1}
 {
 
@@ -75,8 +76,7 @@ void Processor::ProcessVideos(std::string left_file, std::string right_file)
             t_conf.bDrawContours = false;
             t_conf.MinThreshold = 200;
             
-            auto tracker_l = std::make_unique<Tracker>(t_conf);
-            auto tracker_r = std::make_unique<Tracker>(t_conf);
+            auto tracker = std::make_unique<Tracker>(t_conf);
 
             total_frames_ = std::min(left_cap.get(cv::CAP_PROP_FRAME_COUNT), right_cap.get(cv::CAP_PROP_FRAME_COUNT));
             int frame_offset = -1;
@@ -114,11 +114,11 @@ void Processor::ProcessVideos(std::string left_file, std::string right_file)
                     if(frame_offset == -1) frame_offset = frame_num_;
                     int adj_frame = (frame_num_ - frame_offset);                  
 
-                    // Run the tracker_l on the undistorted frames.
-                    tracker_l->CreateMask(left_frame);
-                    tracker_l->CheckForActivity(adj_frame);
-                    tracker_r->CreateMask(right_frame);
-                    tracker_r->CheckForActivity(adj_frame);
+                    // Run the tracker on the undistorted frames.
+                    tracker->CreateMask(left_frame);
+                    tracker->CheckForActivity(adj_frame);
+                    tracker->CreateMask(right_frame);
+                    tracker->CheckForActivity(adj_frame);
 
                     // Write the concatenated undistorted frames.
                     cv::Mat res = ConcatenateMatrices(left_frame, right_frame);
@@ -134,8 +134,7 @@ void Processor::ProcessVideos(std::string left_file, std::string right_file)
             right_cap.release();
             cv::destroyAllWindows();
 
-            AssembleEvents(tracker_l, DE);
-            AssembleEvents(tracker_r, DE);
+            AssembleEvents(tracker, DE);
 
             // Construct the JSON object array of all events detected.
             DE->BuildJSONObjectArray();
@@ -162,16 +161,36 @@ void Processor::UndistortImage(cv::Mat& frame, int index)
     calib.UndistortImage(frame, index);
 }
 
-
 void Processor::AssembleEvents(std::unique_ptr<class Tracker>& tracker, std::unique_ptr<class JSON>& json_ptr)
 {
     for(auto event : tracker->ActivityRange)
     {
         if(event->IsActive())
             event->EndEvent(frame_num_);
-        std::cout << "Event: " << event->GetAsJSON().GetJSON() << "\n";
         json_ptr->AddObject(event->GetAsJSON());
     }
+}
+
+void Processor::TriangulatePoints(std::string points_file, std::string calib_file)
+{
+    Calibration::Input input;
+    std::vector<std::vector<cv::Point2f> > keypoints_l, keypoints_r;
+    {
+        cv::FileStorage fs(points_file, cv::FileStorage::READ);
+        ReadVectorOfVector(fs, "keypoints_left", keypoints_l);
+        ReadVectorOfVector(fs, "keypoints_right", keypoints_r);
+
+        input.image_points[0] = keypoints_l;
+        input.image_points[1] = keypoints_r;
+    }
+    
+    if(input.image_points[0].size() ==  input.image_points[0].size())
+    {
+        auto calib = new Calibration(input, CalibrationType::STEREO, calib_file);
+        calib->ReadCalibration();
+        calib->TriangulatePoints();
+        delete calib;
+    }  
 }
 
 
@@ -191,4 +210,19 @@ cv::Mat ConcatenateMatrices(cv::Mat& left_mat, cv::Mat& right_mat)
     right_mat.copyTo(res(cv::Rect(left_mat.cols, 0, right_mat.cols, right_mat.rows)));
 
     return std::move(res);
+}
+
+void ReadVectorOfVector(cv::FileStorage& fs, std::string name, std::vector<std::vector<cv::Point2f>>& data)
+{
+    data.clear();
+    cv::FileNode fn = fs[name];
+    if (fn.empty())
+        return;
+
+    for (auto node : fn) 
+    {
+        std::vector<cv::Point2f> temp_vec;
+        node >> temp_vec;
+        data.push_back(temp_vec);
+    }
 }
