@@ -41,5 +41,6 @@ static/videos/
 static/video-info/
 static/proc_videos/
 static/temp/
+static/calibrate/
 docs/
 private_config/
