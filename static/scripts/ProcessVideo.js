@@ -268,14 +268,14 @@ class EventHandler
 class Event
 {
     /** Constructs an event within a given start and end range.
-     * @param[in] start The starting frame of the event.
-     * @param[in] end The ending frame of the event.
+     * @param {number} start The starting frame of the event.
+     * @param {number} end The ending frame of the event.
      */
     constructor(start, end)
     {
         this.frame_start = start;
         this.frame_end = end;
-        this.colour = "#ff4546";
+        this.colour = "#64BBE3";
     }
 
     /** Creates a random RGB colour for the event to be drawn as. */

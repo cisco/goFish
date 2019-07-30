@@ -157,6 +157,7 @@ body {
 form {
     margin: 0;
     padding: 10px;
+    width: 100%;
 }
 form > input {
     border-radius: 10px;
@@ -204,32 +205,40 @@ input[type="file"] {
 	height: 0.1px;
 	opacity: 0;
 	overflow: hidden;
-	position: absolute;
-	z-index: -1;
+    position: absolute;
+    z-index: -1;
 }
-
 input[type="file"] + label {
-    display: inline-block;
-    margin-bottom: 1em;
-    padding: 0.5em 1em;
-    font-size: 0.7em;
+    padding: 0.2em 0.7em;
+    font-size: 0.8em;
     background: #2b5491;
     color: #FFFFFF;
+    text-align: center;
+}
+input[type="file"] + label:hover {
+    cursor: pointer;
+}
+input[type="file"] + label:active {
+    background: #004BAF;
+}
+input[type="file"] + label > i {
+    float: left;
+    font-size: 1.2em !important;
 }
 /* End File Input */
 
 /* Sidenav */
 .sidenav {
-    height: 80%;
+    height: 93.75vh;
     width: 203px;
     z-index: 1000;
     display: none;
     position: absolute;
     overflow: scroll;
-    background: #FFFFFF;
-    color: #58585B;
-    border-bottom: 1px solid  #C6C7CA;
-    border-right: 1px solid  #C6C7CA;
+    background: #232323;
+    color: #FFFFFF;
+    border-bottom: 1px solid  #57585b;
+    border-right: 1px solid  #57585b;
 }
 
 .sidenav > .header {
@@ -243,12 +252,9 @@ input[type="file"] + label {
 
 /* Processes */
 .process {
-    background: #DFDFDF;
+    background: #343537;
     border-bottom: 1px solid #C6C7CA;
     padding: 1em;
-}
-.process > .id {
-
 }
 .process > .name {
     padding-right: 1em;
@@ -307,3 +313,23 @@ input[type="file"] + label {
     }
 }
 /* End Loader */
+
+/* Ruler */
+.ruler {
+    background: red;
+}
+.ruler > .point {
+    position: absolute;
+    margin: -0.25em;
+    width: 2em;
+    height: 2em;
+    border-radius: 50%;
+    background: inherit;
+}
+.ruler > .line {
+    position:absolute;
+    width: 0.1em;
+    height: 10px;
+    background: inherit;
+}
+/* End Ruler */

@@ -59,7 +59,7 @@
                     <!--TODO: Get saved camera names from server -->
                     <!--input type="text" name="left-cam"  placeholder="Enter left camera name" >
                     <input type="text" name="right-cam" placeholder="Enter right camera name"><br>-->
-                    <input type="file" id="upload-files" name="upload-files" multiple>
+                    <input type="file" id="upload-files" name="upload-files" data-multiple-caption="{count} videos selected" multiple>
                     <label for="upload-files">Select Stereo Videos...</label>
                     <input class="submit" type="submit" value="Upload Videos" />
                 </form>
@@ -72,14 +72,14 @@
             <div class="dropdown-content">
                 <form method="post" enctype="multipart/form-data" id="calibrate-cameras" action="/calibrate/">
                     <div class="camera">
-                        <input name="left-camera" type="text" placeholder="Enter Left Camera Name" required>
-                        <input id="left-camera-files" type="file" name="left-camera-files" multiple>
-                        <label for="left-camera-files">Select Images...</label><br>
+                        <input name="left-camera" type="text" placeholder="Left Camera Name" required>
+                        <input id="left-camera-files" type="file" name="left-camera-files" data-multiple-caption="<i class='material-icons'>&#xe3f4;</i>{count}" multiple>
+                        <label for="left-camera-files"><i class="material-icons">&#xe2c6;</i></label><br>
                     </div>
                     <div class="camera">
-                        <input name="right-camera" type="text" placeholder="Enter Right Camera Name" required>
-                        <input id="right-camera-files" type="file" name="right-camera-files" multiple>
-                        <label for="right-camera-files">Select Images...</label><br>
+                        <input name="right-camera" type="text" placeholder="Right Camera Name" required>
+                        <input id="right-camera-files" type="file" name="right-camera-files" data-multiple-caption="<i class='material-icons'>&#xe3f4;</i>{count}" multiple>
+                        <label for="right-camera-files"><i class="material-icons">&#xe2c6;</i></label><br>
                     </div>
                     <input class="submit" type="submit" value="Run Calibration"/>
                 </form>
@@ -99,7 +99,7 @@
     <div class="container">
         <!-- Sidenav containing additional info-->
         <div class="sidenav" id="processes">
-            <div class="header">Processes</div><hr>
+            <div class="header">Processes</div>
             {{if .Processes}}
                 {{range $i , $p := .Processes.P}}
                     <div class="process">
@@ -122,10 +122,12 @@
                     <button onclick="SeekBack()"><i class="material-icons">&#xe045;</i></button>
                     <button id="play-pause"><i class="material-icons">&#xe037;</i></button>
                     <button onclick="SeekForward()"><i class="material-icons">&#xe044;</i></button>
-                </div><!-- Toolbar -->
+                </div>
+                <div id="rulers"></div>
+                <!-- Toolbar -->
                 <div id="tools" class="toolbar">
-                    <button id="ruler" onclick="toolkit.SetMode(0, this)"><i class="material-icons">&#xe41c;</i></button>
-                    <button id="clear-ruler" onclick="toolkit.SetMode(1, this)"><i class="material-icons">&#xe888;</i></button>
+                    <button id="ruler" onclick="toolkit.SetMode(0, this)" accesskey="r"><i class="material-icons">&#xe41c;</i></button>
+                    <button id="clear-ruler" onclick="toolkit.SetMode(1, this)" accesskey="c"><i class="material-icons">&#xe888;</i></button>
                 </div>
             </div>
         </div>

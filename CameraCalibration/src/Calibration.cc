@@ -290,7 +290,7 @@ void Calibration::GetUndistortedImage()
         for(size_t l = 0; l < input.image_points[i%2][j].size(); l++)
         {
             //cv::circle(undist_img, input.image_points[i%2][j][l], 6, cv::Scalar(0, 0, 255), -1);
-            cv::circle(undist_img, result.undistorted_points[i%2][j][l], 6, cv::Scalar(0, 255, 0), -1);
+           // cv::circle(undist_img, result.undistorted_points[i%2][j][l], 6, cv::Scalar(0, 255, 0), -1);
         }
 
         if(i % 2 != 0) j = (j+1) % result.undistorted_points[i%2].size();

@@ -95,7 +95,7 @@ func (goFish *GoFish) StartServer() {
 	goFish.server.BuildHTMLTemplate("static/videos.html", "/processing/", goFish.HandleRulerHTML)
 	goFish.server.Box = goFish.box
 
-	/* This is for clearing out folders. It should be removed at some point.
+	/*// This is for clearing out folders. It should be removed at some point.
 	folder, _ := goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
 	log.Println(folder)
 

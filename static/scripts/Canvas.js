@@ -7,6 +7,8 @@
  * onto the adjusted video canvas.
  */
 
+'use strict';
+
 ///////////////////////////////////////////////////////////////////////////////
 // Utility classes
 ///////////////////////////////////////////////////////////////////////////////
@@ -26,11 +28,17 @@ class Toolkit
     }
 
     /** Sets which tool to use via a tool index.
-     * @param {} mode The index of the tool to bxe used.
-     * @param {} button The button object which called this.
+     * @param {int} mode The index of the tool to bxe used.
+     * @param {Object} button The button object which called this.
      */
     SetMode(mode, button)
     {
+        if(mode == 1) 
+        {
+            this.ClearRulers();
+            return;
+        }
+
         if(this.mode != -1 && this.mode == mode)
             if(!button.classList.contains("active")) button.classList.add("active");
             else
@@ -88,50 +96,78 @@ class Toolkit
      */
     AddRuler()
     {
+        var self = this;
         function PostResult(name, ruler, x_offset)
         {
             var line = ruler.line;
-            var sx = (line.start_point.x - x_offset);
-            var ex = (line.end_point.x - x_offset);
-            var data = " \""+name+"\" : { \"P0\" : {\"x\" :" + sx +", \"y\":"+line.start_point.y+"}, \"P1\" : {\"x\" :" + ex + ", \"y\":" + line.end_point.y + "}}";
-            return data;
+            if( line != null)
+            {
+                var sx = (line.start_point.x - x_offset);
+                var ex = (line.end_point.x - x_offset);
+                var data = " \""+name+"\" : { \"P0\" : {\"x\" :" + sx +", \"y\":"+(line.start_point.y - self.canvas.position().top)+"}, \"P1\" : {\"x\" :" + ex + ", \"y\":" + (line.end_point.y - self.canvas.position().top) + "}}";
+                return data;
+            }
+            return null;
         }
 
         if(this.mouse.x <= this.canvas.position().left + this.canvas.width()/2)
         {
             if(this.left_rulers == null) 
-                this.left_rulers = new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#FF1144");
-            this.left_rulers.AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
+                this.left_rulers = new Ruler(this.mouse.x, this.mouse.y, "#FF1144");
+                if(this.left_rulers.line == null)
+                    this.left_rulers.AddPoint(this.mouse.x, this.mouse.y);
         }
         else
         {
             if(this.right_rulers == null) 
-                this.right_rulers = new Ruler(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top, "#40e0d0");
-            this.right_rulers.AddPoint(this.mouse.x - this.canvas.position().left, this.mouse.y - this.canvas.position().top);
+                this.right_rulers = new Ruler(this.mouse.x, this.mouse.y, "#40e0d0");
+            if(this.right_rulers.line == null)
+                this.right_rulers.AddPoint(this.mouse.x, this.mouse.y);
         }
 
-        if(this.left_rulers != null && this.right_rulers != null)
-            if(this.left_rulers.point_2 != null && this.right_rulers.point_2 != null)
+        function PostEvent(e) 
+        {
+            if (self.left_rulers != null && self.right_rulers != null)
             {
-                var left = PostResult("keypoints_left", this.left_rulers, 0);
-                var right = PostResult("keypoints_right", this.right_rulers, this.canvas.width()/2);
+                var left = PostResult("keypoints_left", self.left_rulers, self.canvas.position().left);
+                var right = PostResult("keypoints_right", self.right_rulers, (self.canvas.width() / 2) + self.canvas.position().left);
                 var data = "{ " + left + ", " + right + " }";
 
                 var xhr = new XMLHttpRequest();
                 xhr.open("POST", "/processing/");
-                xhr.setRequestHeader("Content-Type", "application/json");                
+                xhr.setRequestHeader("Content-Type", "application/json");
                 xhr.send(data);
 
-                $("#info-panel").show().css({top:this.mouse.y, left: this.mouse.x-30});
-                setTimeout(function(){$("#world-points").load(window.location.href + " #world-points > * ")}, 3000);
+                $("#info-panel").show().css({ top: self.mouse.y, left: self.mouse.x - 30 });
+                setTimeout(function(){ 
+                    $("#world-points").load(window.location.href + " #world-points > * ") 
+                }, 1000);
             }
+        }
+
+        if (this.left_rulers != null && this.right_rulers != null)
+        {
+          $(document).on('points', PostEvent);
+        }
+
+        $(document).trigger("points");
+
     }
 
     /** Clear all rulers off of the screen. */
     ClearRulers()
     {
-        if(this.left_rulers != null) this.left_rulers = null;
-        if(this.right_rulers != null) this.right_rulers = null;
+        if(this.left_rulers != null)
+        {
+            $("#ruler-"+this.left_rulers.ID).remove();
+            this.left_rulers = null;
+        }
+        if(this.right_rulers != null)
+        {
+            $("#ruler-"+this.right_rulers.ID).remove();
+            this.right_rulers = null;
+        }
+        $("#info-panel").hide();
     }
 
     /** Renders all in-use tools to the canvas. */
@@ -143,14 +179,14 @@ class Toolkit
     }
 }
 
-/** \brief A helper class for storing a mouse object containing the current
- *        position of the cursor on the screen.
+/** A helper class for storing a mouse object containing the current
+ * position of the cursor on the screen.
  */
 class Mouse
 {
     /** Stores the mouse at a given origin.
-     * @param {} x The x coordinate of the cursor.
-     * @param {} y The y coordinate of the cursor.
+     * @param {number} x The x coordinate of the cursor.
+     * @param {number} y The y coordinate of the cursor.
      */
     constructor(x, y)
     {
@@ -171,48 +207,40 @@ class Ruler
 {
     /** Constructor for the beginning point of the ruler. Also defines the 
      * colour of the rendered ruler.
-     * @param {} x The x coordinate of the origin of the ruler.
-     * @param {} y The y coordinate of the origin of the ruler.
-     * @param {} colour The colour to render the points and line of the ruler.
+     * @param {number} x The x coordinate of the origin of the ruler.
+     * @param {number} y The y coordinate of the origin of the ruler.
+     * @param {string} colour The colour to render the points and line of the ruler.
      */
     constructor(x, y, colour="#0011FF")
     {
         this.point_1 = null;
         this.point_2 = null;
-        this.line    = new Line(this.point_1, this.point_2);
+        this.line    = null;
         this.colour  = colour;
+        this.ID      = Math.round(Math.random() * 1000);
+        $("#rulers").prepend('<div class="ruler" id="ruler-'+this.ID+'"></div>')
+        $("#ruler-"+this.ID).css({background: this.colour});
+
     }
 
     /** Adds a new point for the ruler.
-     * @param {} x The x coordinate of the new point.
-     * @param {} y The y coordinate of the new point.
+     * @param {number} x The x coordinate of the new point.
+     * @param {number} y The y coordinate of the new point.
      */
     AddPoint(x, y)
     {
-        if(this.point_1 != null)
-        {
-            this.point_2 = new Point(x, y);
-            this.line.end_point = this.point_2;
-        }
-        else
-        {
-            this.point_1 = new Point(x, y);
-            this.line.start_point = this.point_1;
-        }
+        if(this.point_1 != null && this.point_2 == null)
+            this.point_2 = new Point(x, y, 2, this.ID);
+        else if (this.point_2 == null)
+            this.point_1 = new Point(x, y, 2, this.ID);
+        if(this.point_1 != null & this.point_2 != null && this.line == null)
+            this.line = new Line(this.point_1, this.point_2, this.ID)
     }
 
-    /** Draws the endpoints and line to the canvas.
-     * @param {} canvas The canvas on which to draw the ruler.
-     */
-    Render(canvas)
+    /** Draws the endpoints and line to the canvas. */
+    Render()
     {
-        var context = canvas.getContext('2d');
-        context.fillStyle = this.colour;
-        context.strokeStyle = this.colour;
-        
-        if(this.line != null) this.line.Render(canvas);
-        if(this.point_1 != null) this.point_1.Render(canvas);
-        if(this.point_2 != null) this.point_2.Render(canvas);
+        if(this.line != null) this.line.Render();
     }
 }
 
@@ -228,9 +256,9 @@ class RenderObject
     constructor() {}
 
     /** Base super class render method.
-     * @param {} canvas The canvas on which to render the object.
+     * @param {Object} canvas The canvas on which to render the object.
      */
-    Render(canvas) {}
+    Render() {}
 }
 
 /** Creates a 2D point object, with x and y coordinates in a UV mapping
@@ -239,28 +267,33 @@ class RenderObject
 class Point extends RenderObject
 {
     /** Constructor for the origin and radius of the point.
-     * @param {} x The x coordinate of the point.
-     * @param {} y The y coordinate of the point.
+     * @param {number} x The x coordinate of the point.
+     * @param {number} y The y coordinate of the point.
      */
-    constructor(x, y, r)
+    constructor(x, y, r, pID)
     {
         super();
-        this.x      = x;
-        this.y      = y;
+        this.x = x;
+        this.y = y;
         this.radius = r != null ? r : 2;
-    }
+        this.pID = pID;
+        this.ID =  Math.round(x) + "_" + Math.round(y);
 
-    /** Draws the point to the canvas.
-     * @param {} canvas The canvas on which to render the point.
-     */
-    Render(canvas)
-    {
-        var context = canvas.getContext("2d");
+        $("#ruler-" + this.pID).prepend('<div class="point" id="point-' + this.pID + '_' + this.ID + '"></div>');
+        $("#point-" + this.pID + '_' + this.ID).css({
+            top: this.y,
+            left: this.x,
+            width: this.radius * Math.PI,
+            height: this.radius * Math.PI
+        });
 
-        context.beginPath();
-        context.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
-        context.fill();
-        context.stroke();
+        var self = this;
+        $('#point-' + this.pID + '_' + this.ID).draggable({
+            drag: function(e, ui){
+                self.x = $(this).position().left;
+                self.y = $(this).position().top;
+            }
+        });
     }
 }
 
@@ -268,36 +301,53 @@ class Point extends RenderObject
 class Line extends RenderObject
 {
     /** Default constructor for initializing all member variables.
-     * @param {} p1 The start point for the line.
-     * @param {} p2 The end poijt for the line.
+     * @param {Point} p1 The start point for the line.
+     * @param {Point} p2 The end poijt for the line.
      */
-    constructor(p1, p2)
+    constructor(p1, p2, pID)
     {
         super();
         this.start_point = p1;
         this.end_point   = p2;
+        this.pID = pID;
+
+        $("#ruler-" + this.pID).prepend('<div class="line" id="line-' + this.pID + '"></div>');
+
+        var self = this;
+        $("#point-"+this.pID+"_"+this.start_point.ID).draggable({
+            drag: function(e, ui){
+                self.start_point.x = $(this).position().left;
+                self.start_point.y = $(this).position().top;
+                self.Render();
+            },
+            stop: function(e, ui) {
+                $(document).trigger("points");
+            }
+        });
+        $("#point-"+this.pID+"_"+this.end_point.ID).draggable({
+            drag: function(e, ui){
+                self.end_point.x = $(this).position().left;
+                self.end_point.y = $(this).position().top;
+                self.Render();
+            },
+            stop: function(e, ui) {
+                $(document).trigger("points");
+            }
+        });
     }
 
-    /** Renders both endpoints and  the line between them.
-     * @param {} canvas The canvas on which to render the line.
-     */
-    Render(canvas)
+    /** Renders both endpoints and  the line between them. */
+    Render()
     {
         if(this.start_point != null && this.end_point != null)
         {
-            var ctx = canvas.getContext('2d');
-
-            ctx.beginPath(); 
-            ctx.moveTo(this.start_point.x, this.start_point.y);
-            ctx.lineTo(this.end_point.x, this.end_point.y);
-
-            this.Length();
-            var u = new Point(this.vector.x / this.Length(), this.vector.y / this.Length());
-            var d= this.Length()/2;
-            ctx.fillText(this.Length(), Math.min(this.start_point.x, this.end_point.x) + (d*u.x) + 5,
-                                        Math.min(this.start_point.y, this.end_point.y) + (d*u.y) - 5);
-            ctx.stroke();
-            console.log("I'm still printing!");
+            $('#line-' + this.pID).css({
+                top: this.start_point.y,
+                left: this.start_point.x,
+                height: this.Length() + 'px',
+                transform: "rotate(" + ((Math.atan2((this.start_point.y - this.end_point.y), (this.start_point.x - this.end_point.x)) + Math.PI/2) * 180 / Math.PI) + "deg)",
+                transformOrigin: "0 0"
+            });
         }
     }
 
