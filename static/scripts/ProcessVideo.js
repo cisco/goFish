@@ -233,21 +233,23 @@ class EventHandler
             var slider = (scrubber.value / scrubber.max) * this.canvas.width;
             this.drawLine(slider, slider+5, "#FFFFFF");
 
-            /* 
+            
             // FIXME: This works for moving the scrubber bar to the next event, but not the actual video.
             if(this.events[this.event_index] != null)
             {
-                //console.log(this.events);
-                if(this.events[this.event_index].frame_start * this.canvas.width <= slider && slider <= this.events[this.event_index].frame_end * this.canvas.width);
-                else if (slider / this.canvas.width > this.events[this.event_index].frame_end)
+                console.log(this.event_index + " / " + this.events.length);
+                if (slider / this.canvas.width > this.events[this.event_index].frame_end)
                     if(this.events[this.event_index+1] != null && this.event_index + 1 < this.events.length)
                     {
                         scrubber.value = (this.events[this.event_index+1].frame_start * scrubber.max);
                         console.log("Skipping to next Event");
                         this.event_index = (this.event_index + 1) % this.events.length;
+                        
+                        var video = document.getElementById("selected");
+                            video.currentTime = (scrubber.value / scrubber.max) * video.duration;
                     }
+                    else if(scrubber.value >= scrubber.max) this.event_index = (this.event_index + 1) % (this.events.length - 1);
             }
-            */
         }
     }
 

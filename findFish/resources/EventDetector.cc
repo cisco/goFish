@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <regex>
-#include <iostream>
 
 using namespace cv;
 

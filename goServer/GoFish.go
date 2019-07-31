@@ -95,13 +95,14 @@ func (goFish *GoFish) StartServer() {
 	goFish.server.BuildHTMLTemplate("static/videos.html", "/processing/", goFish.HandleRulerHTML)
 	goFish.server.Box = goFish.box
 
-	/*// This is for clearing out folders. It should be removed at some point.
-	folder, _ := goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
-	log.Println(folder)
+	/*
+		// This is for clearing out folders. It should be removed at some point.
+		folder, _ := goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
+		log.Println(folder)
 
-	for _, v := range folder.Entries {
-		goFish.box.DeleteFile(v.ID, v.Etag)
-	}
+		for _, v := range folder.Entries {
+			goFish.box.DeleteFile(v.ID, v.Etag)
+		}
 	*/
 
 	handler := &http.Server{Addr: addr, Handler: goFish.server}
@@ -341,6 +342,9 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 		var d interface{}
 		decoder.Decode(&d)
 
+		// TODO: There is a bug where O_APPEND doesn't work on Linux, so it just keeps writing
+		// from the EOF, instead of writing from the specified location, thus not overwriting
+		// the previous values.
 		// Try to open the file. If it doesn't exist, create it, and write a default header.
 		header := []byte("%YAML:1.0\n---")
 		file, err := os.OpenFile(
