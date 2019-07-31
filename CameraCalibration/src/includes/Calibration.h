@@ -13,16 +13,12 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-/// \enum CalibrationType
-/// \brief
 enum CalibrationType { SINGLE, STEREO };
 
-/// \class Calibration
 /// \brief Calibrates single and/or stereo cameras.
 class Calibration
 {
 public:
-    /// \struct Input
     /// \brief Input for grid dimensions, camera names, and image points.
     struct Input
     {
@@ -37,7 +33,6 @@ public:
     };
 
 private:
-    /// struct Result
     /// \brief The resultant matrices and undistorted points of the calibration.
     struct Result
     {

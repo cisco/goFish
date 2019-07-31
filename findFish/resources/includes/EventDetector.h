@@ -18,8 +18,7 @@
 
 #include "JsonBuilder.h"
 
-/// \class EventBuilder
-/// \brief Abstract Base class for defining an event.
+/// Abstract Base class for defining an event.
 class EventBuilder
 {
  public:
@@ -51,8 +50,7 @@ class EventBuilder
    JSON json_object;
 };
 
-/// \class QREvent
-/// \brief Defines an event which attempts to detect a QR code from a frame.
+/// Defines an event which attempts to detect a QR code from a frame.
 class QREvent : public EventBuilder
 {
  public:
@@ -86,8 +84,7 @@ class QREvent : public EventBuilder
 
 };
 
-/// \class ActivityEvent
-/// \brief Defines an event in which there was activity of some sort.
+/// Defines an event in which there was activity of some sort.
 class ActivityEvent : public EventBuilder
 {
  public:

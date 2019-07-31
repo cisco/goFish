@@ -12,9 +12,8 @@
 #include <map>
 #include <vector>
 
-/// \class JSON
-/// \brief A JSON builder which takes in values as strings an formats them into
-///        valid JSON.
+/// A JSON builder which takes in values as strings an formats them into
+/// valid JSON.
 class JSON
 {
  public:

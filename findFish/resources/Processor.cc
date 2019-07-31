@@ -16,164 +16,120 @@ cv::Mat ConcatenateMatrices(cv::Mat&, cv::Mat&);
 void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
 
 Processor::Processor()
+    : _tracker{nullptr}, _detected_events{nullptr}
 {
+    for(int i = 0; i < 2; i++)
+        videos[i] = nullptr;
+        
+    Calibration::Input input;
+    input.image_size = cv::Size(1920, 1440);
 
+    _calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
+}
+
+Processor::Processor(std::string left_file, std::string right_file)
+    : _tracker{nullptr}, _detected_events{nullptr}
+{
+    for(int i = 0; i < 2; i++)
+        videos[i] = nullptr;
+
+    if(left_file != "" && right_file != "")
+    {
+        if(left_file != right_file)
+        {
+            videos[0] = new Video(left_file);
+            videos[1] = new Video(right_file);
+        }
+
+        Tracker::Settings t_conf;
+        t_conf.bDrawContours = false;
+        t_conf.MinThreshold = 200;
+        _tracker = new Tracker(t_conf);
+
+        _detected_events = new JSON("DetectedEvents");
+    }
+
+    Calibration::Input input;
+    input.image_size = cv::Size(1920, 1440);
+
+    _calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
 }
 
 Processor::~Processor()
 {
+    for(int i = 0; i < 2; i++)
+        delete videos[i];
 
+    delete _tracker;
+    delete _detected_events;
 }
 
-void Processor::ProcessVideos(std::string left_file, std::string right_file)
+void Processor::ProcessVideos()
 {
-    clock_t time_start = clock();
-    if(left_file != right_file)
+    auto time_start = cv::getTickCount();
+    std::string file_name = "";
+    if (videos[0]->FileName == videos[1]->FileName)
     {
-        cv::VideoCapture left_cap(left_file), right_cap(right_file);
-        if (!left_cap.isOpened() && !right_cap.isOpened())
+        // Create a save location for the new combined video.
+        file_name = "./static/proc_videos/" + videos[0]->FileName + ".mp4";
+        std::cout << "=== Creating \"" << file_name << "\" ===" << std::endl;
+
+        // Setup QR Code detection events for the left and right videos.
+        if(!SyncVideos()) return;
+
+        // Create a writer for the new combined video.
+        cv::VideoWriter writer(
+            file_name,
+            videos[0]->FOURCC,
+            videos[0]->FPS,
+            cv::Size(videos[0]->Width + videos[1]->Width,
+                     std::max(videos[0]->Height, videos[1]->Height)),
+            true);
+
+        int frame_num = 0;
+        while (videos[0]->Get() && videos[1]->Get())
         {
-            std::cerr << "*** Could not open video file(s)" << std::endl;
-            return;
-        }
+            cv::Mat frames[2];
 
-        // Clean up the video filenames.
-        {
-            // Now that we've opened the file, scrub it clean of directory names to get the tag name.
-            left_file = left_file.substr(left_file.find_last_of("/") + 1, left_file.length());
-            left_file = left_file.substr(0, left_file.find_last_of("_"));
-            right_file = right_file.substr(right_file.find_last_of("/") + 1, right_file.length());
-            right_file = right_file.substr(0, right_file.find_last_of("_"));
-        }
-
-        std::string file_name = "";
-        if (left_file == right_file) 
-        {
-            // Create a save location for the new combined video.
-            file_name = "./static/proc_videos/" + left_file + ".mp4";
-            std::cout << "=== Creating \"" << file_name << "\" ===" << std::endl;
-
-            // Create a writer for the new combined video.
-            cv::VideoWriter writer(
-                file_name,
-                int(left_cap.get(cv::CAP_PROP_FOURCC)),
-                left_cap.get(cv::CAP_PROP_FPS),
-                cv::Size(
-                    left_cap.get(cv::CAP_PROP_FRAME_WIDTH) + right_cap.get(cv::CAP_PROP_FRAME_WIDTH),
-                    std::max(left_cap.get(cv::CAP_PROP_FRAME_HEIGHT),
-                             right_cap.get(cv::CAP_PROP_FRAME_HEIGHT))),
-                true);
-
-            // Create the JSON object which will hold all of the detected events.
-            auto DE = new JSON("DetectedEvents");
-
-            // Setup QR Code detection events for the left and right videos.
-            auto detect_QR_left = new QREvent();
-            auto detect_QR_right = new QREvent();
-
-            // Setup the tracker.
-            Tracker::Settings t_conf;
-            t_conf.bDrawContours = false;
-            t_conf.MinThreshold = 200;
+            for(int i = 0; i < 2; i++)
+                videos[i]->Read();
             
-            auto tracker = new Tracker(t_conf);
-
-            int total_frames = std::min(left_cap.get(cv::CAP_PROP_FRAME_COUNT), right_cap.get(cv::CAP_PROP_FRAME_COUNT));
-            int frame_num = 0, frame_offset = -1;
-            while (true) 
+            if(videos[0]->Get() && videos[1]->Get())
             {
-                cv::Mat left_frame, right_frame;
-
-                // Read the frames only as long as either no QR code is detected, or both are detected. Keeps reading the one that isn't detected until it is.
-                if((!detect_QR_left->DetectedQR()) || (detect_QR_left->DetectedQR() && detect_QR_right->DetectedQR()) || left_frame.empty())
-                    left_cap.read(left_frame);
-                if((!detect_QR_right->DetectedQR()) || (detect_QR_left->DetectedQR() && detect_QR_right->DetectedQR()) || right_frame.empty())
-                    right_cap.read(right_frame);
-
-                if ((left_frame.empty() || right_frame.empty()) && (frame_num < total_frames - 1))
-                    continue;
-
-                frame_num++;
-                if (frame_num >= total_frames)
-                    break;
-
-                // Detect QR codes in each video.
-                if(!detect_QR_left->DetectedQR()) detect_QR_left->CheckFrame(left_frame, frame_num);
-                if(!detect_QR_right->DetectedQR()) detect_QR_right->CheckFrame(right_frame, frame_num);
-                
-                // Undistort the frames using camera calibration data.
-                UndistortImage(left_frame, 0); // Index 0 means get Left camera calibration data.
-                UndistortImage(right_frame, 1);// Index 1 means get Right camera calibration data.
-
-                // Only start writing if both videos are synced up.
-                if(detect_QR_left->DetectedQR() && detect_QR_right->DetectedQR())
+                for(int i = 0; i < 2; i++)
                 {
-                    // Account for frame offset from the last detected QR code frame.
-                    if(frame_offset == -1) frame_offset = frame_num;
-                    int adj_frame = (frame_num - frame_offset);                  
+                    // Undistort the frames using camera calibration data.
+                    frames[i] = *videos[i]->Get();
+                    UndistortImage(frames[i], 0);
 
                     // Run the tracker on the undistorted frames.
-                    tracker->CreateMask(left_frame);
-                    tracker->CheckForActivity(adj_frame);
-                    tracker->CreateMask(right_frame);
-                    tracker->CheckForActivity(adj_frame);
-
-                    // Write the concatenated undistorted frames.
-                    cv::Mat res = ConcatenateMatrices(left_frame, right_frame);
-                    writer << res;
+                    _tracker->CreateMask(frames[i]);
+                    _tracker->CheckForActivity(frame_num);
                 }
+
+                // Write the concatenated undistorted frames.
+                cv::Mat res = ConcatenateMatrices(frames[0], frames[1]);
+                writer << res;
             }
-
-            std::cout << "=== Finished Concatenating ===\n";
-            std::cout << "=== Time taken: " << (double)(clock() - time_start)/CLOCKS_PER_SEC << " seconds ===\n";
-
-            // Release all video files and close any open windows.
-            left_cap.release();
-            right_cap.release();
-            cv::destroyAllWindows();
-
-            AssembleEvents(tracker, DE, frame_num);
-
-            // Construct the JSON object array of all events detected.
-            DE->BuildJSONObjectArray();
-
-            // Cleanup pointers
-            {
-                delete detect_QR_left;
-                delete detect_QR_right;
-                delete tracker;
-                delete DE;
-            }
-
-            // Create the JSON file for this video.
-            std::ofstream configFile;
-            configFile.open("static/video-info/DE_" + left_file + ".json");
-            configFile << DE->GetJSON();
-            configFile.close();
-
-            std::cout << "=== Finished Processing for \"" << file_name << "\"===\n";
         }
-    }
-}
 
-void Processor::UndistortImage(cv::Mat& frame, int index) const
-{
-    Calibration::Input input;
-    input.image_size = cv::Size(1920, 1440);
+        cv::destroyAllWindows();
+        
+        std::cout << "=== Finished Concatenating ===\n";
+        std::cout << "=== Time taken: " << (double)(cv::getTickCount() - time_start)/cv::getTickFrequency() << " seconds ===\n";
 
-    Calibration calib(input, CalibrationType::STEREO, "StereoCalibration.yaml");
-    calib.ReadCalibration();
+        AssembleEvents(frame_num);
 
-    calib.UndistortImage(frame, index);
-}
+        // Construct the JSON object array of all events detected.
+        _detected_events->BuildJSONObjectArray();
 
-void Processor::AssembleEvents(Tracker* tracker, JSON* json_ptr, int& last_frame) const
-{
-    for(auto event : tracker->ActivityRange)
-    {
-        if(event->IsActive())
-            event->EndEvent(last_frame);
-        json_ptr->AddObject(event->GetAsJSON());
+        // Create the JSON file for this video.
+        std::ofstream configFile;
+        configFile.open("static/video-info/DE_" + videos[0]->FileName + ".json");
+        configFile << _detected_events->GetJSON();
+        configFile.close();
+
+        std::cout << "=== Finished Processing for \"" << file_name << "\"===\n";
     }
 }
 
@@ -190,13 +146,106 @@ void Processor::TriangulatePoints(std::string points_file, std::string calib_fil
         input.image_points[1] = keypoints_r;
     }
     
+    _calib->input = input;
     if(input.image_points[0].size() ==  input.image_points[0].size())
     {
-        auto calib = new Calibration(input, CalibrationType::STEREO, calib_file);
-        calib->ReadCalibration();
-        calib->TriangulatePoints();
-        delete calib;
+        _calib->ReadCalibration();
+        _calib->TriangulatePoints();
     }  
+}
+
+void Processor::UndistortImage(cv::Mat& frame, int index) const
+{
+    _calib->ReadCalibration();
+    _calib->UndistortImage(frame, index);
+}
+
+void Processor::AssembleEvents(int& last_frame) const
+{
+    for(auto event : _tracker->ActivityRange)
+    {
+        if(event->IsActive())
+            event->EndEvent(last_frame);
+        _detected_events->AddObject(event->GetAsJSON());
+    }
+}
+
+bool Processor::SyncVideos() const
+{
+    for(int i = 0 ; i < 2; i++)
+    {
+        QREvent detect_QR;
+        while(true)
+        {
+            if(!detect_QR.DetectedQR())
+            {
+                videos[i]->Read();
+                if(videos[i]->Get())
+                    detect_QR.CheckFrame(*videos[i]->Get(), videos[i]->Frame);
+            }
+            else break;
+        }
+        if(!detect_QR.DetectedQR()) return false;
+    }
+    return true;
+}
+
+
+Video::Video(std::string file)
+    : FileName{""}, Frame{0}, TotalFrames{0}, _filepath{file}, _frame{nullptr}, _vid_cap{nullptr}
+{
+    try {
+        FileName = _filepath.substr(_filepath.find_last_of("/") + 1, _filepath.length());
+        FileName = FileName.substr(0,FileName.find_last_of("_"));
+        
+        _vid_cap = new cv::VideoCapture(_filepath);
+        if (!_vid_cap->isOpened())
+            throw "Video \"" + FileName + "\" could not be opened!";
+
+        TotalFrames = _vid_cap->get(cv::CAP_PROP_FRAME_COUNT);
+        Width       = _vid_cap->get(cv::CAP_PROP_FRAME_WIDTH);
+        Height      = _vid_cap->get(cv::CAP_PROP_FRAME_HEIGHT);
+        FPS         = _vid_cap->get(cv::CAP_PROP_FPS);
+        FOURCC      = _vid_cap->get(cv::CAP_PROP_FOURCC);
+    } catch(const char* msg) {
+        std::cerr << "*** " << msg << std::endl;
+    }
+}
+
+Video::~Video()
+{
+    if(_vid_cap) _vid_cap->release();  
+    delete _frame;
+    delete _vid_cap;
+}
+
+void Video::Read()
+{
+    if(_vid_cap)
+    {
+        if(Frame <= TotalFrames)
+        {
+            cv::Mat frame;
+            if (_vid_cap->isOpened()) 
+                _vid_cap->read(frame);
+            
+            if(frame.empty())
+                Read();
+            
+            _frame = new cv::Mat(frame);
+            Frame++;
+        }
+        else _frame = nullptr;
+    }
+}
+
+cv::Mat* Video::Get() const
+{
+    if(_frame != nullptr)
+        if(!_frame->empty())
+            return _frame;
+
+    return nullptr;
 }
 
 
