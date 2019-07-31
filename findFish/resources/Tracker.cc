@@ -39,16 +39,16 @@ void Tracker::CreateMask(cv::Mat& frame)
         cv::erode(_mask, _mask, kernel, cv::Point(sigmaX, sigmaY));
 
         cv::threshold(_mask, _mask, Config.MinThreshold, Config.MaxThreshold, cv::THRESH_BINARY);
-
-        //cv::imshow("mask", _mask);
     }
 
+    /*
     // Haar Cascade method.
     for(auto cascade : cascades)
     {
         std::vector<cv::Rect> objects;
         cascade.second->detectMultiScale(frame, objects);
     }
+    */
     
     GetObjectContours(frame);
 }
@@ -65,12 +65,11 @@ void Tracker::GetObjectContours(cv::Mat& frame)
     cv::Canny(_mask, canny_output, thresh, thresh * 2, 5);
     cv::findContours(canny_output, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
 
-    std::vector<std::vector<cv::Point2f>> prec_conts(contours.size());
-
     if(Config.bDrawContours)
     {
         cv::RNG rng(12345);
         cv::Mat drawing = cv::Mat::zeros(canny_output.size(), CV_8UC3);
+        std::vector<std::vector<cv::Point2f>> prec_conts(contours.size());
         for (size_t i = 0; i < contours.size(); i++)
         {
             cv::approxPolyDP(contours[i], prec_conts[i], 3, true);

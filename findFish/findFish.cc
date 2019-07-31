@@ -11,7 +11,7 @@ using namespace std;
 #define JSON_DIR "static/video-info/"
 #define VIDEO_DIR "static/videos/"
 
-#define THREADED
+//#define THREADED
 
 void HandleSignal(int);
 std::vector<std::string> GetVideosFromDir(std::string, std::vector<std::string>);
@@ -20,18 +20,21 @@ int main(int argc, char** argv)
 {
     signal(SIGABRT, HandleSignal);
     signal(SIGINT, HandleSignal);
-
-    bool bHasVideos = false;
     
-    auto processor = std::make_unique<Processor>();
-
     // FIXME: This is very hacky, and should not stay. 
     // See https://github.com/cisco/goFish/projects/1#card-24603535 for possible solution.
-    if(std::string(argv[1]) == "TRIANGULATE")
-        processor->TriangulatePoints("calib_config/measure_points.yaml", "StereoCalibration.yaml");
+    if(argv[1] != NULL)
+    {
+        if(std::string(argv[1]) == "TRIANGULATE")
+        {
+            Processor p;
+            p.TriangulatePoints("calib_config/measure_points.yaml", "StereoCalibration.yaml");
+        }
+        return 0;
+    }
     
-    if(argv[1] != NULL) return 0;
 
+    bool bHasVideos = false;
     do 
     {
         // Check for video files first.
@@ -68,7 +71,8 @@ int main(int argc, char** argv)
             for (size_t i = 0; i < video_files.size() / 2; i++)
             {
                 std::cout << "!!! Creating Thread: " << i << " !!!\n";
-                threads[i] = std::thread(&Processor::ProcessVideos, processor.get(), video_files[i], video_files[(i + 1) % video_files.size()]);
+                auto p = new Processor(video_files[i], video_files[(i + 1) % video_files.size()]);
+                threads[i] = std::thread(&Processor::ProcessVideos, p);
             }
 
             for(auto& thread : threads)
@@ -78,7 +82,10 @@ int main(int argc, char** argv)
 #else
         if(argv[1] == NULL)
             for (size_t i = 0; i < video_files.size() / 2; i += 2)
-                processor->ProcessVideos(video_files[i], video_files[(i + 1) % video_files.size()]);
+                {
+                    Processor p(video_files[i], video_files[(i + 1) % video_files.size()]);
+                    p.ProcessVideos();
+                }
 #endif
         /*
         if (video_files.size() > 1)

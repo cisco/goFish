@@ -12,15 +12,12 @@
 #include <opencv2/objdetect.hpp>
 #include <map>
 
-/// \class Tracker
-/// \brief Uses background subtraction and thresholding to detect motion in an
-///        image.
+/// Uses background subtraction and thresholding to detect motion in an image.
 class Tracker
 {
 public:
-    /// \struct Settings
-    /// \brief Nested wrapper class for settings pertaining to motion detection
-    ///        and edge detection.
+    /// Nested wrapper class for settings pertaining to motion detection
+    /// and edge detection.
     struct Settings
     {
         // Contour Settings
