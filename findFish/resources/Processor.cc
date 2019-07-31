@@ -2,6 +2,7 @@
 #include "includes/JsonBuilder.h"
 #include "includes/EventDetector.h"
 #include "includes/Calibration.h"
+#include "includes/Tracker.h"
 
 #include <iostream>
 #include <fstream>
@@ -15,7 +16,6 @@ cv::Mat ConcatenateMatrices(cv::Mat&, cv::Mat&);
 void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
 
 Processor::Processor()
-    : frame_num_{0}, total_frames_{-1}
 {
 
 }
@@ -65,21 +65,21 @@ void Processor::ProcessVideos(std::string left_file, std::string right_file)
                 true);
 
             // Create the JSON object which will hold all of the detected events.
-            auto DE = std::make_unique<JSON>("DetectedEvents");
+            auto DE = new JSON("DetectedEvents");
 
             // Setup QR Code detection events for the left and right videos.
-            auto detect_QR_left = std::make_unique<QREvent>();
-            auto detect_QR_right = std::make_unique<QREvent>();
+            auto detect_QR_left = new QREvent();
+            auto detect_QR_right = new QREvent();
 
             // Setup the tracker.
             Tracker::Settings t_conf;
             t_conf.bDrawContours = false;
             t_conf.MinThreshold = 200;
             
-            auto tracker = std::make_unique<Tracker>(t_conf);
+            auto tracker = new Tracker(t_conf);
 
-            total_frames_ = std::min(left_cap.get(cv::CAP_PROP_FRAME_COUNT), right_cap.get(cv::CAP_PROP_FRAME_COUNT));
-            int frame_offset = -1;
+            int total_frames = std::min(left_cap.get(cv::CAP_PROP_FRAME_COUNT), right_cap.get(cv::CAP_PROP_FRAME_COUNT));
+            int frame_num = 0, frame_offset = -1;
             while (true) 
             {
                 cv::Mat left_frame, right_frame;
@@ -90,16 +90,16 @@ void Processor::ProcessVideos(std::string left_file, std::string right_file)
                 if((!detect_QR_right->DetectedQR()) || (detect_QR_left->DetectedQR() && detect_QR_right->DetectedQR()) || right_frame.empty())
                     right_cap.read(right_frame);
 
-                if ((left_frame.empty() || right_frame.empty()) && (frame_num_ < total_frames_ - 1))
+                if ((left_frame.empty() || right_frame.empty()) && (frame_num < total_frames - 1))
                     continue;
 
-                frame_num_++;
-                if (frame_num_ >= total_frames_)
+                frame_num++;
+                if (frame_num >= total_frames)
                     break;
 
                 // Detect QR codes in each video.
-                if(!detect_QR_left->DetectedQR()) detect_QR_left->CheckFrame(left_frame, frame_num_);
-                if(!detect_QR_right->DetectedQR()) detect_QR_right->CheckFrame(right_frame, frame_num_);
+                if(!detect_QR_left->DetectedQR()) detect_QR_left->CheckFrame(left_frame, frame_num);
+                if(!detect_QR_right->DetectedQR()) detect_QR_right->CheckFrame(right_frame, frame_num);
                 
                 // Undistort the frames using camera calibration data.
                 UndistortImage(left_frame, 0); // Index 0 means get Left camera calibration data.
@@ -108,11 +108,9 @@ void Processor::ProcessVideos(std::string left_file, std::string right_file)
                 // Only start writing if both videos are synced up.
                 if(detect_QR_left->DetectedQR() && detect_QR_right->DetectedQR())
                 {
-                    //std::cout << "Writing frame " << frame_num_ << " of " << total_frames_ << "\n";
-
                     // Account for frame offset from the last detected QR code frame.
-                    if(frame_offset == -1) frame_offset = frame_num_;
-                    int adj_frame = (frame_num_ - frame_offset);                  
+                    if(frame_offset == -1) frame_offset = frame_num;
+                    int adj_frame = (frame_num - frame_offset);                  
 
                     // Run the tracker on the undistorted frames.
                     tracker->CreateMask(left_frame);
@@ -134,10 +132,18 @@ void Processor::ProcessVideos(std::string left_file, std::string right_file)
             right_cap.release();
             cv::destroyAllWindows();
 
-            AssembleEvents(tracker, DE);
+            AssembleEvents(tracker, DE, frame_num);
 
             // Construct the JSON object array of all events detected.
             DE->BuildJSONObjectArray();
+
+            // Cleanup pointers
+            {
+                delete detect_QR_left;
+                delete detect_QR_right;
+                delete tracker;
+                delete DE;
+            }
 
             // Create the JSON file for this video.
             std::ofstream configFile;
@@ -150,7 +156,7 @@ void Processor::ProcessVideos(std::string left_file, std::string right_file)
     }
 }
 
-void Processor::UndistortImage(cv::Mat& frame, int index)
+void Processor::UndistortImage(cv::Mat& frame, int index) const
 {
     Calibration::Input input;
     input.image_size = cv::Size(1920, 1440);
@@ -161,12 +167,12 @@ void Processor::UndistortImage(cv::Mat& frame, int index)
     calib.UndistortImage(frame, index);
 }
 
-void Processor::AssembleEvents(std::unique_ptr<class Tracker>& tracker, std::unique_ptr<class JSON>& json_ptr)
+void Processor::AssembleEvents(Tracker* tracker, JSON* json_ptr, int& last_frame) const
 {
     for(auto event : tracker->ActivityRange)
     {
         if(event->IsActive())
-            event->EndEvent(frame_num_);
+            event->EndEvent(last_frame);
         json_ptr->AddObject(event->GetAsJSON());
     }
 }

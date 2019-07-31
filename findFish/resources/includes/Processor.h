@@ -9,7 +9,13 @@
 
 #include <string>
 #include <vector>
-#include "Tracker.h"
+
+// Forward declarations
+namespace cv {
+  class Mat;
+}
+class Tracker;
+class JSON;
 
 /// \class Processor
 /// \brief Goes through stereo videos and finds events, and then writes a
@@ -35,13 +41,13 @@ class Processor
 
  private:
    /// Undistorts the given frame using calibration data for camera at index.
-   void UndistortImage(cv::Mat&, int);
+   /// \param[in, out] frame The frame to undistort.
+   /// \param[in] index The camera index to get calibration from.
+   void UndistortImage(cv::Mat&, int) const;
    
    /// Adds all activity events from the tracker into an array.
-   void AssembleEvents(std::unique_ptr<class Tracker>&, std::unique_ptr<class JSON>&);
-
- private:
-    int frame_num_;
-    int total_frames_;
-
+   /// \param[in, out] tracker The event tracker
+   /// \param[in, out] json_ptr Pointer to a JSON object builder.
+   /// \param[in, out] last_frame The last frame before quitting.
+   void AssembleEvents(Tracker*, JSON*, int&) const;
 };

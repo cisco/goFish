@@ -89,8 +89,6 @@ void Tracker::CheckForActivity(int& CurrentFrame)
     {
         if(!bIsActive)
         {
-            std::cout << "*** Activity Event : " << ActivityRange.size() << std::endl;
-
             ActivityRange.resize(ActivityRange.size() + 1);
             if(!ActivityRange[ActivityRange.size()-1])
             {
@@ -103,8 +101,6 @@ void Tracker::CheckForActivity(int& CurrentFrame)
         if(ActivityRange[ActivityRange.size()-1])
             if(ActivityRange[ActivityRange.size()-1]->IsActive() && bIsActive)
             {
-                std::cout << "*** End Activity: " << ActivityRange.size()-1 << "\n";
-
                 ActivityRange[ActivityRange.size()-1]->EndEvent(CurrentFrame);
                 bIsActive = false;
             }

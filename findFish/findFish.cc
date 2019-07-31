@@ -1,24 +1,17 @@
 #include <iostream>
-#include <fstream>
 #include <dirent.h>
 #include <thread>
-#include <vector>
 #include <csignal>
-#include <stdio.h>
-#include <algorithm>
-#include <time.h>
 
-#include "resources/includes/Calibration.h"
 #include "resources/includes/Processor.h"
 
 using namespace std;
-using namespace cv;
 
 // Directory to save JSON config video_files to.
 #define JSON_DIR "static/video-info/"
 #define VIDEO_DIR "static/videos/"
 
-//#define THREADED
+#define THREADED
 
 void HandleSignal(int);
 std::vector<std::string> GetVideosFromDir(std::string, std::vector<std::string>);
@@ -28,32 +21,38 @@ int main(int argc, char** argv)
     signal(SIGABRT, HandleSignal);
     signal(SIGINT, HandleSignal);
 
-    setUseOptimized(true);
-
     bool bHasVideos = false;
     
     auto processor = std::make_unique<Processor>();
 
+    // FIXME: This is very hacky, and should not stay. 
+    // See https://github.com/cisco/goFish/projects/1#card-24603535 for possible solution.
+    if(std::string(argv[1]) == "TRIANGULATE")
+        processor->TriangulatePoints("calib_config/measure_points.yaml", "StereoCalibration.yaml");
+    
+    if(argv[1] != NULL) return 0;
+
     do 
     {
-        std::vector<std::string> json_filters = { ".json", ".JSON" };
-        auto json_files = GetVideosFromDir(JSON_DIR, json_filters);
-
+        // Check for video files first.
         std::vector<std::string> vid_filters = { ".mp4", ".MP4" };
         auto video_files = GetVideosFromDir(VIDEO_DIR, vid_filters);
         std::sort(video_files.begin(), video_files.end());
 
-        bHasVideos = !video_files.empty() ? true : false;
-
+        // If there are none, then nothing to do.
+        bHasVideos = !video_files.empty();
         if(!bHasVideos) break;
+
+        std::vector<std::string> json_filters = { ".json", ".JSON" };
+        auto json_files = GetVideosFromDir(JSON_DIR, json_filters);
 
         for (size_t i = 0; i < json_files.size(); i++) 
         {
-            string jf = json_files[i].substr(json_files[i].find("DE_") + 3, json_files[i].length());
+            std::string jf = json_files[i].substr(json_files[i].find("DE_") + 3, json_files[i].length());
             jf = jf.substr(0, jf.find_last_of("."));
 
             for (auto it = video_files.begin(); it != video_files.end(); ++it)
-                if ((*it).find(jf) != string::npos) 
+                if ((*it).find(jf) != std::string::npos) 
                 {
                     video_files.erase(it);
                     break;
@@ -62,13 +61,18 @@ int main(int argc, char** argv)
         std::sort(video_files.begin(), video_files.end());
 
 #ifdef THREADED
-        std::vector<std::thread> threads;
-        threads.resize(video_files.size());
-        for (size_t i = 0; i < video_files.size() / 2; i++)
+        if(argv[1] == NULL)
         {
-            std::cout << "!!! Creating Thread: " << i << " !!!\n";
-            threads[i] = thread(ProcessVideos, video_files[i], video_files[(i + 1) % video_files.size()]);
-            threads[i].join();
+            std::vector<std::thread> threads;
+            threads.resize(video_files.size());
+            for (size_t i = 0; i < video_files.size() / 2; i++)
+            {
+                std::cout << "!!! Creating Thread: " << i << " !!!\n";
+                threads[i] = std::thread(&Processor::ProcessVideos, processor.get(), video_files[i], video_files[(i + 1) % video_files.size()]);
+            }
+
+            for(auto& thread : threads)
+                if(thread.joinable()) thread.join();
         }
 
 #else
@@ -83,11 +87,6 @@ int main(int argc, char** argv)
         */
 
     } while (bHasVideos);
-
-    // FIXME: This is very hacky, and should not stay. 
-    // See https://github.com/cisco/goFish/projects/1#card-24603535 for possible solution.
-    if(argv[1] != NULL)
-        processor->TriangulatePoints("calib_config/measure_points.yaml", "StereoCalibration.yaml");
 
     return 0;
 }
