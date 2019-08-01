@@ -100,8 +100,7 @@ class VideoHandler
     {
         if(this.video != null)
         {
-            console.log(this.video.buffered);
-            if(Math.ceil(this.video.buffered.end(this.video.buffered.length-1)) == Math.ceil(this.video.duration))
+//            if(Math.ceil(this.video.buffered.end(this.video.buffered.length-1)) == Math.ceil(this.video.duration))
             {
                 if(this.timer != null) clearInterval(this.timer);
         
@@ -112,11 +111,11 @@ class VideoHandler
                 scrubber.value = Number(this.video.currentTime) * FRAMERATE;
                 document.getElementById("adjusted-time").innerHTML = Math.ceil(parseFloat(scrubber.value));
             }
-            else if(this.timer == null)
+            /*else if(this.timer == null)
             {
                 var self = this;
                 this.timer = setInterval(function(){self.play();}, 1000);
-            }
+            }*/
         }
     }
 
