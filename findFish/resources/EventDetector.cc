@@ -19,6 +19,10 @@ const JSON EventBuilder::GetAsJSON()
     return json_object;
 }
 
+std::pair<int, int> EventBuilder::GetRange() const
+{
+    return std::make_pair(start_frame, end_frame);
+}
 
 /////////////////////////////////////////////////////////////////////////////////////
 // QR Code Event

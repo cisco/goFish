@@ -57,6 +57,9 @@ private:
   /// \returns True is both videos found a sync point point. False otherwise.
   bool SyncVideos() const;
 
+public:
+  bool Success;
+
 private:
   Video* videos[2];
   Tracker* _tracker;
@@ -83,6 +86,11 @@ public:
   /// video should be done.
   /// \returns Pointer to the current frame read from the video.
   cv::Mat* Get() const;
+
+  /// Checks whether the video has ended or not.
+  /// \returns True if the video frames are equal to the total frames, false
+  /// otherwise.
+  bool Ended();
 
 public:
   std::string FileName;

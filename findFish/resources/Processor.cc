@@ -16,7 +16,7 @@ cv::Mat ConcatenateMatrices(cv::Mat&, cv::Mat&);
 void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
 
 Processor::Processor()
-    : _tracker{nullptr}, _detected_events{nullptr}
+    : Success{false}, _tracker{nullptr}, _detected_events{nullptr}
 {
     for(int i = 0; i < 2; i++)
         videos[i] = nullptr;
@@ -28,7 +28,7 @@ Processor::Processor()
 }
 
 Processor::Processor(std::string left_file, std::string right_file)
-    : _tracker{nullptr}, _detected_events{nullptr}
+    : Success{false}, _tracker{nullptr}, _detected_events{nullptr}
 {
     for(int i = 0; i < 2; i++)
         videos[i] = nullptr;
@@ -87,10 +87,9 @@ void Processor::ProcessVideos()
             true);
 
         int frame_num = 0;
-        while (videos[0]->Get() && videos[1]->Get())
+        while (!videos[0]->Ended() && !videos[1]->Ended())
         {
             cv::Mat frames[2];
-
             for(int i = 0; i < 2; i++)
                 videos[i]->Read();
             
@@ -110,6 +109,7 @@ void Processor::ProcessVideos()
                 // Write the concatenated undistorted frames.
                 cv::Mat res = ConcatenateMatrices(frames[0], frames[1]);
                 writer << res;
+                frame_num++;
             }
         }
 
@@ -130,6 +130,7 @@ void Processor::ProcessVideos()
         configFile.close();
 
         std::cout << "=== Finished Processing for \"" << file_name << "\"===\n";
+        Success = true;
     }
 }
 
@@ -246,6 +247,11 @@ cv::Mat* Video::Get() const
             return _frame;
 
     return nullptr;
+}
+
+bool Video::Ended()
+{
+    return Frame >= TotalFrames;
 }
 
 

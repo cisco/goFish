@@ -42,12 +42,12 @@
         <div class="nav-item dropdown">
             <div class="nav-item-text"><i class="material-icons">&#xe1db;</i>&emsp;Processed Videos</div>
             <div class="dropdown-content files" id="files">
-            {{if .Files}}
-                {{range $i , $f := .Files.Names}}
+            {{if not .Files}}
+                <div class="no-file">No Files to select.</div>
+            {{else if .Files}}
+                    {{range $i , $f := .Files.Names}}
                     <div class="file-item">{{ $f }}</div>
-                {{end}}
-            {{else}}
-                <div class="no-file">No Files to select. Please upload some!</div>
+                    {{end}}
             {{end}}
             </div>
         </div>

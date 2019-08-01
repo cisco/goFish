@@ -100,12 +100,23 @@ class VideoHandler
     {
         if(this.video != null)
         {
-            this.video.play();
-            this.ended = false;
+            console.log(this.video.buffered.end(0), this.video.duration);
+            if(this.video.buffered.end(0) == this.video.duration)
+            {
+                if(this.timer != null) clearInterval(this.timer);
+        
+                this.video.play();
+                this.ended = false;
 
-            var scrubber = document.getElementById("event-time-bar");
-            scrubber.value = Number(this.video.currentTime) * FRAMERATE;
-            document.getElementById("adjusted-time").innerHTML = Math.ceil(parseFloat(scrubber.value));
+                var scrubber = document.getElementById("event-time-bar");
+                scrubber.value = Number(this.video.currentTime) * FRAMERATE;
+                document.getElementById("adjusted-time").innerHTML = Math.ceil(parseFloat(scrubber.value));
+            }
+            else if(this.timer == null)
+            {
+                var self = this;
+                this.timer = setInterval(function(){self.play();}, 1000);
+            }
         }
     }
 
@@ -235,7 +246,7 @@ class EventHandler
 
             
             // FIXME: This works for moving the scrubber bar to the next event, but not the actual video.
-            if(this.events[this.event_index] != null)
+            /*if(this.events[this.event_index] != null)
             {
                 console.log(this.event_index + " / " + this.events.length);
                 if (slider / this.canvas.width > this.events[this.event_index].frame_end)
@@ -249,7 +260,7 @@ class EventHandler
                             video.currentTime = (scrubber.value / scrubber.max) * video.duration;
                     }
                     else if(scrubber.value >= scrubber.max) this.event_index = (this.event_index + 1) % (this.events.length - 1);
-            }
+            }*/
         }
     }
 
