@@ -1,7 +1,9 @@
-#include <iostream>
-#include <dirent.h>
-#include <thread>
+#include <algorithm>
 #include <csignal>
+#include <dirent.h>
+#include <iostream>
+#include <string.h>
+#include <thread>
 
 #include "resources/includes/Processor.h"
 
