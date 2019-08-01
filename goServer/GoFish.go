@@ -97,7 +97,21 @@ func (goFish *GoFish) StartServer() {
 
 	/*
 		// This is for clearing out folders. It should be removed at some point.
-		folder, _ := goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
+		folder, _ := goFish.box.GetFolderItems(os.Getenv("vidFolder"), 10, 0)
+		log.Println(folder)
+
+		for _, v := range folder.Entries {
+			goFish.box.DeleteFile(v.ID, v.Etag)
+		}
+
+		folder, _ = goFish.box.GetFolderItems(os.Getenv("vidInfoFolder"), 10, 0)
+		log.Println(folder)
+
+		for _, v := range folder.Entries {
+			goFish.box.DeleteFile(v.ID, v.Etag)
+		}
+
+		folder, _ = goFish.box.GetFolderItems(os.Getenv("procVidFolder"), 10, 0)
 		log.Println(folder)
 
 		for _, v := range folder.Entries {
@@ -310,7 +324,7 @@ func (goFish *GoFish) HandleVideoUpload(r *http.Request) interface{} {
 		formFields, saveLocations := make([]string, 1), make([]string, 1)
 		formFields[0] = "upload-files"
 		saveLocations[0] = "static/videos/"
-		goFish.server.UploadFiles(r, formFields, saveLocations, FileFormat{t.Format("2006-01-02-030405"), ".mp4", 10 << 20, true}, os.Getenv("vidFolder"))
+		goFish.server.UploadFiles(r, formFields, saveLocations, FileFormat{t.Format("2006-01-02-150405"), ".mp4", 10 << 20, true}, os.Getenv("vidFolder"))
 	}
 	return struct{}{}
 }
@@ -486,6 +500,9 @@ func (goFish *GoFish) GetFilenames(r *http.Request) interface{} {
 	for _, v := range items.Entries {
 		fileNames = append(fileNames, v.Name)
 	}
+	if len(fileNames) == 0 {
+		return nil
+	}
 
 	return struct{ Names []string }{fileNames}
 }
@@ -518,13 +535,21 @@ func IsDirEmpty(name string) (bool, int, error) {
 	}
 	defer dir.Close()
 
-	files, err := dir.Readdir(3)
+	files, err := dir.Readdir(100)
 
-	if err == io.EOF || (len(files) == 1 && files[0].Name() == ".DS_Store") {
+	index := 0
+	for i, v := range files {
+		if v.Name() == ".DS_Store" {
+			index = i
+			break
+		}
+	}
+
+	if err == io.EOF || (len(files) == 1 && files[index].Name() == ".DS_Store") {
 		return true, 0, nil
 	}
 
-	if files[0].Name() == ".DS_Store" {
+	if files[index].Name() == ".DS_Store" {
 		return false, len(files) - 1, err
 	}
 	return false, len(files), err

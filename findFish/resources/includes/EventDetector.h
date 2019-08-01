@@ -44,6 +44,10 @@ class EventBuilder
   /// \return The event formatted into a JSON object.
   const JSON GetAsJSON();
 
+  /// Get the range of the event frames.
+  /// \returns The start and end frames as a pair.
+  std::pair<int, int> GetRange() const;
+
  protected:
    cv::Mat frame_;
    int start_frame, end_frame;

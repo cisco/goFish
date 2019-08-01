@@ -77,21 +77,32 @@ int main(int argc, char** argv)
 
             for(auto& thread : threads)
                 if(thread.joinable()) thread.join();
-        }
 
+            // TODO: Should check to make sure processing was succesful.
+            if(video_files.size() > 1)
+                for(std::string video : video_files)
+                    std::remove(video.c_str());
+        }
 #else
         if(argv[1] == NULL)
             for (size_t i = 0; i < video_files.size() / 2; i += 2)
                 {
                     Processor p(video_files[i], video_files[(i + 1) % video_files.size()]);
                     p.ProcessVideos();
+
+                    if(p.Success)
+                    {
+                        std::remove(video_files[i].c_str());
+                        std::remove(video_files[(i + 1) % video_files.size()].c_str());
+                    }
+                    else
+                    {
+                        std::cout << " > \"" << video_files[i].c_str() << "\" and \"";
+                        std::cout << video_files[(i + 1) % video_files.size()].c_str();
+                        std::cout << "\" could not be processed. Missing QR code(s).";
+                    }
                 }
 #endif
-        /*
-        if (video_files.size() > 1)
-            for (std::string video : video_files)
-                std::remove(video.c_str());
-        */
 
     } while (bHasVideos);
 

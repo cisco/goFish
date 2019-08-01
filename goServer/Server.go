@@ -181,8 +181,7 @@ func (s *Server) UploadFiles(r *http.Request, formValues []string, saveLocations
 			if len(contents) > 0 {
 				if boxFolderID != "" {
 					// Upload temp file to box.
-					fileObject, err := s.Box.UploadFile(contents, FileFormat.Name+FileFormat.Format, boxFolderID)
-					log.Println(fileObject.Entries[0].Size)
+					_, err := s.Box.UploadFile(contents, FileFormat.Name+FileFormat.Format, boxFolderID)
 
 					if err != nil {
 						log.Println(err)

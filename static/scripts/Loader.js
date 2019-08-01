@@ -77,7 +77,7 @@ $(function(){
             var label	 = input.nextElementSibling,
                 labelVal = label.innerHTML;
 
-            input.addEventListener( 'change', function( e )
+            function GetFiles(e)
             {
                 console.log("Hi");
                 var fileName = '';
@@ -88,7 +88,9 @@ $(function(){
                     label.innerHTML = fileName;
                 else
                     label.innerHTML = labelVal;
-            });
+            }
+            input.addEventListener('load', GetFiles);
+            input.addEventListener('change', GetFiles);
         });
     }
 

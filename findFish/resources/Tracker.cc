@@ -16,10 +16,11 @@ Tracker::Tracker(Tracker::Settings s)
 Tracker::~Tracker()
 {
     for(auto event : ActivityRange)
-    {
-        delete event;
-        event = nullptr;
-    }
+        if(event)
+        {
+            delete event;
+            event = nullptr;
+        }
 }
 
 void Tracker::CreateMask(cv::Mat& frame)
@@ -93,7 +94,8 @@ void Tracker::CheckForActivity(int& CurrentFrame)
             {
                 ActivityRange[ActivityRange.size()-1] = new ActivityEvent(int(ActivityRange.size()), CurrentFrame, -1);
                 bIsActive = true;
-            } else ActivityRange.resize(ActivityRange.size() - 1);
+            } 
+            else ActivityRange.resize(ActivityRange.size() - 1);
         }
     }
     else if(ActivityRange.size() > 0)
@@ -102,6 +104,16 @@ void Tracker::CheckForActivity(int& CurrentFrame)
             {
                 ActivityRange[ActivityRange.size()-1]->EndEvent(CurrentFrame);
                 bIsActive = false;
+            }
+
+    // If the event started and ended on the same frame, remove it (there's nothing really happening).
+    if(ActivityRange.size() > 0)
+        if(ActivityRange[ActivityRange.size()-1])
+            if(ActivityRange[ActivityRange.size()-1]->GetRange().first == ActivityRange[ActivityRange.size()-1]->GetRange().second)
+            {
+                delete ActivityRange[ActivityRange.size()-1];
+                ActivityRange[ActivityRange.size()-1] = nullptr;
+                ActivityRange.resize(ActivityRange.size()-1);
             }
 }
 
