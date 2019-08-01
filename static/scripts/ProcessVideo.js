@@ -100,8 +100,8 @@ class VideoHandler
     {
         if(this.video != null)
         {
-            console.log(this.video.buffered.end(0), this.video.duration);
-            if(this.video.buffered.end(0) == this.video.duration)
+            console.log(this.video.buffered.end(this.video.buffered.length-1), this.video.duration);
+            if(Math.ceil(this.video.buffered.end(this.video.buffered.length-1)) == Math.ceil(this.video.duration))
             {
                 if(this.timer != null) clearInterval(this.timer);
         
