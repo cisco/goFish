@@ -82,12 +82,6 @@ if [ $1 = "FULL" ]; then
     cd ../ || exit
 fi
 
-## Install Go project dependencies.
-go get github.com/dgrijalva/jwt-go
-go get github.com/fatih/structs
-go get github.com/go-yaml/yaml
-go get github.com/mitchellh/mapstructure
-
 ## Build all components.
 ./build.sh
 
