@@ -9,8 +9,8 @@
 
 #include <string>
 #include <vector>
+#include <mutex>
 
-// Forward declarations
 namespace cv {
   class Mat;
   class VideoCapture;
@@ -61,10 +61,10 @@ public:
   bool Success;
 
 private:
-  Video* videos[2];
-  Tracker* _tracker;
-  JSON* _detected_events;
-  Calibration* _calib;
+  std::unique_ptr<Video>        _videos[2];
+  std::unique_ptr<Tracker>      _tracker;
+  std::shared_ptr<JSON>         _detected_events;
+  std::shared_ptr<Calibration>  _calib;
 
 };
 
@@ -85,12 +85,12 @@ public:
   /// Returns a pointer to the current frame. If the frame is null, then the 
   /// video should be done.
   /// \returns Pointer to the current frame read from the video.
-  cv::Mat* Get() const;
+  std::shared_ptr<cv::Mat> Get() const;
 
   /// Checks whether the video has ended or not.
   /// \returns True if the video frames are equal to the total frames, false
   /// otherwise.
-  bool Ended();
+  bool Ended() const;
 
 public:
   std::string FileName;
@@ -103,6 +103,7 @@ public:
 
 private:
   std::string _filepath;
-  cv::Mat* _frame;
-  cv::VideoCapture* _vid_cap;
+  std::shared_ptr<cv::Mat> _frame;
+  std::unique_ptr<cv::VideoCapture> _vid_cap;
+  mutable std::mutex _mutex;
 };

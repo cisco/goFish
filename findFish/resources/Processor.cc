@@ -8,6 +8,7 @@
 #include <fstream>
 #include <algorithm>
 #include <time.h>
+#include <stdexcept>
 
 ///////////////////////////////////////////////////////////////////////////////
 // Forward Declarations
@@ -16,98 +17,91 @@ cv::Mat ConcatenateMatrices(cv::Mat&, cv::Mat&);
 void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
 
 Processor::Processor()
-    : Success{false}, _tracker{nullptr}, _detected_events{nullptr}
+    : Success{false}
 {
-    for(int i = 0; i < 2; i++)
-        videos[i] = nullptr;
-        
     Calibration::Input input;
     input.image_size = cv::Size(1920, 1440);
 
-    _calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
+    _calib = std::make_shared<Calibration>(input, CalibrationType::STEREO, "stereo_calibration.yaml");
+    _calib->ReadCalibration();
 }
 
 Processor::Processor(std::string left_file, std::string right_file)
-    : Success{false}, _tracker{nullptr}, _detected_events{nullptr}
+    : Success{false}
 {
-    for(int i = 0; i < 2; i++)
-        videos[i] = nullptr;
-
     if(left_file != "" && right_file != "")
     {
         if(left_file != right_file)
         {
-            videos[0] = new Video(left_file);
-            videos[1] = new Video(right_file);
+            _videos[0] = std::make_unique<Video>(left_file);
+            _videos[1] = std::make_unique<Video>(right_file);
         }
 
         Tracker::Settings t_conf;
         t_conf.bDrawContours = false;
         t_conf.MinThreshold = 200;
-        _tracker = new Tracker(t_conf);
+        _tracker = std::make_unique<Tracker>(t_conf);
 
-        _detected_events = new JSON("DetectedEvents");
+        _detected_events = std::make_shared<JSON>("DetectedEvents");
     }
 
     Calibration::Input input;
     input.image_size = cv::Size(1920, 1440);
 
-    _calib = new Calibration(input, CalibrationType::STEREO, "StereoCalibration.yaml");
+    _calib = std::make_shared<Calibration>(input, CalibrationType::STEREO, "stereo_calibration.yaml");
+    _calib->ReadCalibration();
 }
 
 Processor::~Processor()
 {
-    for(int i = 0; i < 2; i++)
-        delete videos[i];
-
-    delete _tracker;
-    delete _detected_events;
 }
 
 void Processor::ProcessVideos()
 {
     auto time_start = cv::getTickCount();
     std::string file_name = "";
-    if (videos[0]->FileName == videos[1]->FileName)
+    if (_videos[0]->FileName == _videos[1]->FileName)
     {
         // Create a save location for the new combined video.
-        file_name = "./static/proc_videos/" + videos[0]->FileName + ".mp4";
+        file_name = "./static/proc_videos/" + _videos[0]->FileName + ".mp4";
         std::cout << "=== Creating \"" << file_name << "\" ===" << std::endl;
 
-        // Setup QR Code detection events for the left and right videos.
-        if(!SyncVideos()) return;
+        // Setup QR Code detection events for the left and right _videos.
+        if (!SyncVideos())
+            throw std::runtime_error("Videos did not sync. Either they are "
+                                     "missing QR code(s), or none were detected.");
 
         // Create a writer for the new combined video.
         cv::VideoWriter writer(
             file_name,
-            videos[0]->FOURCC,
-            videos[0]->FPS,
-            cv::Size(videos[0]->Width + videos[1]->Width,
-                     std::max(videos[0]->Height, videos[1]->Height)),
+            _videos[0]->FOURCC,
+            _videos[0]->FPS,
+            cv::Size(_videos[0]->Width + _videos[1]->Width,
+                     std::max(_videos[0]->Height, _videos[1]->Height)),
             true);
 
         int frame_num = 0;
-        while (!videos[0]->Ended() && !videos[1]->Ended())
+        while (!_videos[0]->Ended() && !_videos[1]->Ended())
         {
-            cv::Mat frames[2];
+            std::shared_ptr<cv::Mat> frames[2];
             for(int i = 0; i < 2; i++)
-                videos[i]->Read();
+                _videos[i]->Read();
             
-            if(videos[0]->Get() && videos[1]->Get())
+            if(_videos[0]->Get() && _videos[1]->Get())
             {
                 for(int i = 0; i < 2; i++)
                 {
                     // Undistort the frames using camera calibration data.
-                    frames[i] = *videos[i]->Get();
-                    UndistortImage(frames[i], 0);
+                    frames[i] = _videos[i]->Get();
+                    UndistortImage(*frames[i], 0);
 
                     // Run the tracker on the undistorted frames.
-                    _tracker->CreateMask(frames[i]);
+                    _tracker->CreateMask(*frames[i]);
                     _tracker->CheckForActivity(frame_num);
                 }
 
                 // Write the concatenated undistorted frames.
-                cv::Mat res = ConcatenateMatrices(frames[0], frames[1]);
+                cv::Mat res = ConcatenateMatrices(*frames[0], *frames[1]);
                 writer << res;
                 frame_num++;
             }
@@ -125,11 +119,11 @@ void Processor::ProcessVideos()
 
         // Create the JSON file for this video.
         std::ofstream configFile;
-        configFile.open("static/video-info/DE_" + videos[0]->FileName + ".json");
+        configFile.open("static/video-info/DE_" + _videos[0]->FileName + ".json");
         configFile << _detected_events->GetJSON();
         configFile.close();
 
-        std::cout << "=== Finished Processing for \"" << file_name << "\"===\n";
+        std::cout << "=== Finished Processing for \"" << file_name << "\" ===\n";
         Success = true;
     }
 }
@@ -147,17 +141,13 @@ void Processor::TriangulatePoints(std::string points_file, std::string calib_fil
         input.image_points[1] = keypoints_r;
     }
     
-    _calib->input = input;
-    if(input.image_points[0].size() ==  input.image_points[0].size())
-    {
-        _calib->ReadCalibration();
-        _calib->TriangulatePoints();
-    }  
+    _calib->_input = input;
+    _calib->ReadCalibration();
+    _calib->TriangulatePoints();
 }
 
 void Processor::UndistortImage(cv::Mat& frame, int index) const
 {
-    _calib->ReadCalibration();
     _calib->UndistortImage(frame, index);
 }
 
@@ -180,48 +170,48 @@ bool Processor::SyncVideos() const
         {
             if(!detect_QR.DetectedQR())
             {
-                videos[i]->Read();
-                if(videos[i]->Get())
-                    detect_QR.CheckFrame(*videos[i]->Get(), videos[i]->Frame);
+                _videos[i]->Read();
+                if(_videos[i]->Get())
+                    detect_QR.CheckFrame(*_videos[i]->Get(), _videos[i]->Frame);
             }
             else break;
         }
         if(!detect_QR.DetectedQR()) return false;
     }
+    std::cout << " > Synced videos\n";
     return true;
 }
 
 
 Video::Video(std::string file)
-    : FileName{""}, Frame{0}, TotalFrames{0}, _filepath{file}, _frame{nullptr}, _vid_cap{nullptr}
+    : FileName{""}, Frame{0}, TotalFrames{0}, _filepath{file}
 {
     try {
         FileName = _filepath.substr(_filepath.find_last_of("/") + 1, _filepath.length());
         FileName = FileName.substr(0,FileName.find_last_of("_"));
         
-        _vid_cap = new cv::VideoCapture(_filepath);
+        _vid_cap = std::make_unique<cv::VideoCapture>(_filepath);
         if (!_vid_cap->isOpened())
-            throw "Video \"" + FileName + "\" could not be opened!";
+            throw std::runtime_error("Video \"" + FileName + "\" could not be opened!");
 
         TotalFrames = _vid_cap->get(cv::CAP_PROP_FRAME_COUNT);
         Width       = _vid_cap->get(cv::CAP_PROP_FRAME_WIDTH);
         Height      = _vid_cap->get(cv::CAP_PROP_FRAME_HEIGHT);
         FPS         = _vid_cap->get(cv::CAP_PROP_FPS);
         FOURCC      = _vid_cap->get(cv::CAP_PROP_FOURCC);
-    } catch(const char* msg) {
-        std::cerr << "*** " << msg << std::endl;
+    } catch(std::exception& e) {
+        std::cerr << " !> " << e.what() << std::endl;
     }
 }
 
 Video::~Video()
 {
-    if(_vid_cap) _vid_cap->release();  
-    delete _frame;
-    delete _vid_cap;
+    if(_vid_cap) _vid_cap->release();
 }
 
 void Video::Read()
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     if(_vid_cap)
     {
         if(Frame <= TotalFrames)
@@ -231,17 +221,21 @@ void Video::Read()
                 _vid_cap->read(frame);
             
             if(frame.empty())
+            {
+                _mutex.unlock();
                 Read();
+            }
             
-            _frame = new cv::Mat(frame);
+            _frame = std::make_shared<cv::Mat>(frame);
             Frame++;
         }
         else _frame = nullptr;
     }
 }
 
-cv::Mat* Video::Get() const
+std::shared_ptr<cv::Mat> Video::Get() const
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     if(_frame != nullptr)
         if(!_frame->empty())
             return _frame;
@@ -249,7 +243,7 @@ cv::Mat* Video::Get() const
     return nullptr;
 }
 
-bool Video::Ended()
+bool Video::Ended() const
 {
     return Frame >= TotalFrames;
 }

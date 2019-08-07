@@ -6,42 +6,47 @@
 
 using namespace cv;
 
-/////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Forward Declarations
 std::vector<std::string> SplitString(std::string& str, const char* delimiter);
 
 
-/////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Event Builder Base Class
+EventBuilder::EventBuilder() : _start_frame{ -1 }, _end_frame{ -1 } {}
+
+EventBuilder::~EventBuilder() {}
 
 const JSON EventBuilder::GetAsJSON()
 {
-    return json_object;
+    return *_json_object.get();
 }
 
 std::pair<int, int> EventBuilder::GetRange() const
 {
-    return std::make_pair(start_frame, end_frame);
+    return std::make_pair(_start_frame, _end_frame);
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // QR Code Event
 QREvent::QREvent() : EventBuilder() {}
 
 void QREvent::CheckFrame(cv::Mat& frame, int& currFrame)
 {
-    frame_ = frame;
-    if(!frame_.empty())
+    std::lock_guard<std::mutex> lock(_mutex);
+
+    _frame = frame;
+    if(!_frame.empty())
     {
         QRCodeDetector qrDetector;
         Mat boundBox;
-        std::string url = qrDetector.detectAndDecode(frame_, boundBox);
+        std::string url = qrDetector.detectAndDecode(_frame, boundBox);
         if (url.length() > 0 && !DetectedQR()) 
         {
             StartEvent(currFrame);
-            std::map<std::string, std::string> info = GetGeoURIValues(url);
-            info.insert(std::make_pair("frame", std::to_string(start_frame)));
-            json_object = JSON("Event_QRCode", info);
+            auto info = GetGeoURIValues(url);
+            info.insert(std::make_pair("frame", std::to_string(_start_frame)));
+            _json_object = std::make_unique<JSON>("Event_QRCode", info);
 
             EndEvent(currFrame);
         }
@@ -50,20 +55,20 @@ void QREvent::CheckFrame(cv::Mat& frame, int& currFrame)
 
 void QREvent::StartEvent(int& currFrame)
 {
-    start_frame = currFrame;
+    _start_frame = currFrame;
 }
 
 void QREvent::EndEvent(int& currFrame)
 {
-    end_frame = currFrame;
+    _end_frame = currFrame;
 }
 
-const bool QREvent::DetectedQR()
+const bool QREvent::DetectedQR() const
 {
-    return (start_frame != -1 && end_frame != -1);
+    return (_start_frame != -1 && _end_frame != -1);
 }
 
-std::map<std::string, std::string> QREvent::GetGeoURIValues(std::string& uri)
+std::map<std::string, std::string> QREvent::GetGeoURIValues(std::string& uri) const
 {
     std::map<std::string, std::string> json;
     
@@ -98,29 +103,31 @@ ActivityEvent::ActivityEvent(int id, int start, int end) : EventBuilder(), id_{i
 
 void ActivityEvent::CheckFrame(cv::Mat& frame, int& currFrame)
 {
-    
+    std::lock_guard<std::mutex> lock(_mutex);
 }
 
 void ActivityEvent::StartEvent(int& currFrame)
 {
-    if(start_frame == -1) start_frame = currFrame;
+    std::lock_guard<std::mutex> lock(_mutex);
+    if(_start_frame == -1) _start_frame = currFrame;
 }
 
 void ActivityEvent::EndEvent(int& currFrame)
 {
-    if(IsActive()) end_frame = currFrame;
-    if(start_frame != -1 && end_frame != -1)
+    std::lock_guard<std::mutex> lock(_mutex);
+    if(IsActive()) _end_frame = currFrame;
+    if(_start_frame != -1 && _end_frame != -1)
     {
         std::map<std::string, std::string> info;
-        info.insert(std::make_pair("frame_start", std::to_string(start_frame)));
-        info.insert(std::make_pair("frame_end", std::to_string(end_frame)));
-        json_object = JSON("Event_Activity_"+std::to_string(id_), info);
+        info.insert(std::make_pair("frame_start", std::to_string(_start_frame)));
+        info.insert(std::make_pair("frame_end", std::to_string(_end_frame)));
+        _json_object = std::make_unique<JSON>("Event_Activity_"+std::to_string(id_), info);
     }
 }
 
-bool ActivityEvent::IsActive()
+bool ActivityEvent::IsActive() const
 {
-    return (start_frame != -1 && end_frame == -1);
+    return (_start_frame != -1 && _end_frame == -1);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
