@@ -12,18 +12,20 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <mutex>
 
 enum CalibrationType { SINGLE, STEREO };
 
-/// \brief Calibrates single and/or stereo cameras.
+/// Calibrates single and/or stereo cameras.
 class Calibration
 {
 public:
-    /// \brief Input for grid dimensions, camera names, and image points.
+    /// Input for grid dimensions, camera names, and image points.
     struct Input
     {
         cv::Size grid_size;
         float grid_dot_size;
+
         cv::Size image_size;
         std::string camera_names[2];
         std::vector<std::string> images[2];
@@ -33,22 +35,19 @@ public:
     };
 
 private:
-    /// \brief The resultant matrices and undistorted points of the calibration.
+    /// The resultant matrices and undistorted points of the calibration.
     struct Result
     {
-        // Intrinsic Matrices
         cv::Mat CameraMatrix[2];
-        // Distortion coefficients
         cv::Mat DistCoeffs[2];
         std::vector<cv::Mat> rvecs[2], tvecs[2];
-        int n_image_pairs;
         
+        int n_image_pairs;
         std::vector<std::string> good_images;
+        
         std::vector<std::vector<cv::Point3f>> object_points;
         std::vector<std::vector<cv::Point2f>> undistorted_points[2];
-        std::vector<std::vector<cv::Point2f>> non_stereo_points[2];
 
-        // Stereo Matrices
         cv::Mat R, T;
         cv::Mat R1, R2, Q, P1, P2, E, F;
     };
@@ -70,12 +69,12 @@ public:
     void ReadImages(std::string, std::string);
 
     /// Undistorts and displays all obtained and valid calibration images.
-    void GetUndistortedImage();
+    void GetUndistortedImage() const;
 
     /// Undistorts a given image using calibration results.
     /// \param[in, out] img The image to undistort.
     /// \param[in] index Which camera results to use.
-    void UndistortImage(cv::Mat&, int);
+    void UndistortImage(cv::Mat&, int) const;
 
     /// Triangulates undistorted image points into real world 3D coordinates.
     void TriangulatePoints();
@@ -94,14 +93,15 @@ private:
     void UndistortPoints();
 
 public:
-    bool bRunCalibration;
-    Input input;
+    Input _input;
 
 private:
-    Result result;
+    Result _result;
+
+    std::recursive_mutex _mutex;
     
-    std::string outfile_name;
-    std::string out_dir;
-    CalibrationType type;
-    int flags = 0;
+    std::string _outfile_name;
+    std::string _out_dir;
+    CalibrationType _type;
+    int _flags = 0;
 };

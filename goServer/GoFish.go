@@ -474,9 +474,9 @@ func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
 }
 
 // GetWorldPoints : Retrieves world points and sends them to the client to be
-//  measured.
+// measured.
 func (goFish *GoFish) GetWorldPoints(r *http.Request) interface{} {
-	file, err := ioutil.ReadFile("calib_config/ObjectPoints.yaml")
+	file, err := ioutil.ReadFile("calib_config/object_points.yaml")
 	if err != nil {
 		return nil
 	}

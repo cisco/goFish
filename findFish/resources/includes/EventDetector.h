@@ -15,18 +15,19 @@
 
 #include <map>
 #include <string>
+#include <mutex>
 
-#include "JsonBuilder.h"
+class JSON;
 
 /// Abstract Base class for defining an event.
 class EventBuilder
 {
  public:
   /// Default constructor.
-  EventBuilder() : start_frame{ -1 }, end_frame{ -1 }, json_object{JSON("")} {}
+  EventBuilder();
 
   /// Default destructor.
-  virtual ~EventBuilder() {};
+  virtual ~EventBuilder();
 
   /// Check frame for some sort of event.
   /// \param[in, out] The current frame.
@@ -49,9 +50,10 @@ class EventBuilder
   std::pair<int, int> GetRange() const;
 
  protected:
-   cv::Mat frame_;
-   int start_frame, end_frame;
-   JSON json_object;
+  std::mutex _mutex;
+  cv::Mat _frame;
+  int _start_frame, _end_frame;
+  std::unique_ptr<JSON> _json_object;
 };
 
 /// Defines an event which attempts to detect a QR code from a frame.
@@ -79,12 +81,12 @@ class QREvent : public EventBuilder
 
   /// Returns whether or not a QR code was found.
   /// \return If the QR code was detected or not.
-  const bool DetectedQR();
+  const bool DetectedQR() const;
  
  private:
   /// Parses the QR code URL for a Geo URI.
   /// \return All the key-value pairs found in the URL.
-  std::map<std::string, std::string> GetGeoURIValues(std::string& uri);
+  std::map<std::string, std::string> GetGeoURIValues(std::string& uri) const;
 
 };
 
@@ -117,7 +119,7 @@ class ActivityEvent : public EventBuilder
 
   /// Checks whether or not the event is still happening.
   /// \return The running state of the event.
-  bool IsActive();
+  bool IsActive() const;
 
  private:
    int id_;

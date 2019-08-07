@@ -25,16 +25,21 @@ int main(int argc, char** argv)
     
     // FIXME: This is very hacky, and should not stay. 
     // See https://github.com/cisco/goFish/projects/1#card-24603535 for possible solution.
-    if(argv[1] != NULL)
+    if (argv[1] != NULL) 
     {
-        if(std::string(argv[1]) == "TRIANGULATE")
-        {
-            Processor p;
-            p.TriangulatePoints("calib_config/measure_points.yaml", "StereoCalibration.yaml");
-        }
+        if (std::string(argv[1]) == "TRIANGULATE")
+            try 
+            {
+                Processor p;
+                p.TriangulatePoints("calib_config/measure_points.yaml", "StereoCalibration.yaml");
+            } 
+            catch (const std::exception& e) 
+            {
+                std::cerr << e.what() << '\n';
+            }
+
         return 0;
     }
-    
 
     bool bHasVideos = false;
     do 
@@ -88,6 +93,7 @@ int main(int argc, char** argv)
 #else
         if(argv[1] == NULL)
             for (size_t i = 0; i < video_files.size() / 2; i += 2)
+                try
                 {
                     Processor p(video_files[i], video_files[(i + 1) % video_files.size()]);
                     p.ProcessVideos();
@@ -97,12 +103,10 @@ int main(int argc, char** argv)
                         std::remove(video_files[i].c_str());
                         std::remove(video_files[(i + 1) % video_files.size()].c_str());
                     }
-                    else
-                    {
-                        std::cout << " > \"" << video_files[i].c_str() << "\" and \"";
-                        std::cout << video_files[(i + 1) % video_files.size()].c_str();
-                        std::cout << "\" could not be processed. Missing QR code(s).";
-                    }
+                }
+                catch(const std::exception& e)
+                {
+                    std::cerr << e.what() << '\n';
                 }
 #endif
 
