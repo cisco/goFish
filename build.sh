@@ -1,3 +1,4 @@
+#!/bin/bash
 ## Build Go
 cd goServer || exit
 go build
@@ -7,9 +8,11 @@ cd .. || exit
 cd findFish || exit
 mkdir build
 cd build || exit
-cmake .. && make && cd ../..
+cmake .. && make
+cd ../.. || exit
 
-cd CameraCalibration || exit
+cd cameraCalibration || exit
 mkdir build
 cd build || exit
-cmake .. && make && cd ../..
+cmake .. && make
+cd ../.. || exit

@@ -1,9 +1,10 @@
+#!/bin/bash
 PROJECT_PATH=~
 
-sudo apt-get -y install doxygen
-sudo apt-get -y install npm
-sudo npm install -g jsdoc
+apt-get -y install doxygen
+apt-get -y install npm
+npm install -g jsdoc
 
-cd $PROJECT_PATH/goFish/
+cd /goFish/
 doxygen
-jsdoc static/scripts/*.js -d docs/js
+jsdoc /goFish/static/scripts/*.js -d docs/js

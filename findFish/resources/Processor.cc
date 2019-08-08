@@ -10,9 +10,6 @@
 #include <time.h>
 #include <stdexcept>
 
-///////////////////////////////////////////////////////////////////////////////
-// Forward Declarations
-///////////////////////////////////////////////////////////////////////////////
 cv::Mat ConcatenateMatrices(cv::Mat&, cv::Mat&);
 void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
 

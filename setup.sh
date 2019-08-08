@@ -1,29 +1,37 @@
-#!/bin/sh
+#!/bin/bash
 ## Constants
-HOME_DIRECTORY=/home/ubuntu
-PROJECT_DIRECTORY=~
+HOME_DIRECTORY=/root/
 OPENCV_VERSION=4.1.0
 
-if [ $1 = "FULL" ]; then
+## Linux
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+    apt-get update
+    apt-get upgrade -y
+## Mac OSX
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    brew update
+fi
+
+if [[ $1 = "FULL" ]]; then
     ## Linux
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
-        sudo apt-get update
-        sudo apt-get -y install cmake
-        sudo apt-get -y install gcc
-        sudo apt-get -y install g++
-        sudo apt-get -y install golang-go
+         apt-get -y install cmake
+         apt-get -y install git
+         apt-get -y install gcc
+         apt-get -y install g++
+         apt-get -y install golang-go
+         apt-get -y install python3
     ## Mac OSX
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        brew update
         brew install cmake
     fi
 fi
 
 ## Install Opencv 4.1
-if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
+if [[ $1 = "FULL" ]] || [[ $1 = "OPENCV" ]]; then
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
-        sudo apt-get -y install build-essential
-        sudo apt-get -y install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+         apt-get -y install build-essential
+         apt-get -y install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
     fi
     ## Get OpenCV git repos.
     cd ~ || exit
@@ -62,7 +70,7 @@ if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
         -D BUILD_opencv_xobjdetect=ON\
         ..
     make -j7
-    sudo make install
+    make install
     
     ## Remove the OpenCV git repos to save on space.
     cd ~ || exit
@@ -70,9 +78,9 @@ if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
 fi
 
 ## Go to the project.
-cd $PROJECT_DIRECTORY/goFish || exit
+cd /goFish || exit
 
-if [ $1 = "FULL" ]; then
+if [[ $1 = "FULL" ]]; then
     cd static/ || exit
     mkdir temp
     mkdir videos
@@ -84,5 +92,6 @@ fi
 
 ## Build all components.
 ./build.sh
+./document.sh
 
 
