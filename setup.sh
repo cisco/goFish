@@ -1,6 +1,6 @@
 #!/bin/bash
 ## Constants
-HOME_DIRECTORY=/
+HOME_DIRECTORY=~
 OPENCV_VERSION=4.1.0
 
 ## Linux
