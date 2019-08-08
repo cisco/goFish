@@ -28,7 +28,7 @@ if [[ $1 = "FULL" ]]; then
 fi
 
 ## Install Opencv 4.1
-if [[ $1 = "FULL" ]] || [[ $1 = "OPENCV" ]]; then
+if [ $1 = "FULL" ] || [ $1 = "OPENCV" ]; then
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
          sudo apt-get -y install build-essential
          sudo apt-get -y install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
@@ -78,7 +78,7 @@ if [[ $1 = "FULL" ]] || [[ $1 = "OPENCV" ]]; then
 fi
 
 ## Go to the project.
-#cd ~ || exit
+cd ~/cisco/goFish/ || exit
 
 if [[ $1 = "FULL" ]]; then
     cd static/ || exit
@@ -92,6 +92,5 @@ fi
 
 ## Build all components.
 ./build.sh
-./document.sh
 
 
