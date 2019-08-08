@@ -6,7 +6,7 @@ OPENCV_VERSION=4.1.0
 ## Linux
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     sudo apt-get update
-    sudo apt-get upgrade -y
+    #sudo apt-get upgrade -y
 ## Mac OSX
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     brew update
@@ -78,7 +78,7 @@ if [[ $1 = "FULL" ]] || [[ $1 = "OPENCV" ]]; then
 fi
 
 ## Go to the project.
-cd /goFish || exit
+#cd ~ || exit
 
 if [[ $1 = "FULL" ]]; then
     cd static/ || exit
