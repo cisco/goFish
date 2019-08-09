@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM alpine:3.8
 LABEL maintainer="Tomas Rigaux"
 
 RUN mkdir /goFish
