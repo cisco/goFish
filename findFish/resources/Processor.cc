@@ -255,7 +255,6 @@ cv::Mat ConcatenateMatrices(cv::Mat& left_mat, cv::Mat& right_mat)
     int rows = std::max(left_mat.rows, right_mat.rows);
     int cols = left_mat.cols + right_mat.cols;
 
-    cv::Mat3b conc(rows, cols, cv::Vec3b(0, 0, 0));
     cv::Mat3b res(rows, cols, cv::Vec3b(0, 0, 0));
 
     left_mat.copyTo(res(cv::Rect(0, 0, left_mat.cols, left_mat.rows)));

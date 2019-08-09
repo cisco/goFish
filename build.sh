@@ -6,13 +6,13 @@ cd .. || exit
 
 ## Build C++
 cd findFish || exit
-mkdir build
+mkdir -p build
 cd build || exit
 cmake .. && make
 cd ../.. || exit
 
 cd cameraCalibration || exit
-mkdir build
+mkdir -p build
 cd build || exit
 cmake .. && make
 cd ../.. || exit
