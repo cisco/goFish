@@ -1,26 +1,21 @@
 #!/bin/bash
-## Constants
-HOME_DIRECTORY=~
+
 OPENCV_VERSION=4.1.0
 
 ## Linux
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    sudo apt-get update
-    #sudo apt-get upgrade -y
+    apt-get update
+    #apt-get upgrade -y
 ## Mac OSX
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     brew update
 fi
 
+## Install ancillary dependencies
 if [[ $1 = "FULL" ]]; then
     ## Linux
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
-         sudo apt-get -y install cmake
-         sudo apt-get -y install git
-         sudo apt-get -y install gcc
-         sudo apt-get -y install g++
-         sudo apt-get -y install golang-go
-         sudo apt-get -y install python3
+         apt-get -y install cmake git gcc g++ golang-go python3
     ## Mac OSX
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         brew install cmake
@@ -30,13 +25,13 @@ fi
 ## Install Opencv 4.1
 if [[ $1 = "FULL" ]] || [[ $1 = "OPENCV" ]]; then
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
-         sudo apt-get -y install build-essential
-         sudo apt-get -y install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+         apt-get -y install build-essential
+         apt-get -y install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
     fi
     ## Get OpenCV git repos.
     cd ~ || exit
-    git clone https://github.com/opencv/opencv.git
-    git clone https://github.com/opencv/opencv_contrib.git
+    git clone --depth 1 https://github.com/opencv/opencv.git
+    git clone --depth 1 https://github.com/opencv/opencv_contrib.git
     
     ## Sync up the OpenCV repos.
     cd ~/opencv_contrib || exit
@@ -50,7 +45,7 @@ if [[ $1 = "FULL" ]] || [[ $1 = "OPENCV" ]]; then
     cmake -D CMAKE_BUILD_TYPE=RELEASE \
         -D CMAKE_INSTALL_PREFIX=/usr/local \
         -D OPENCV_GENERATE_PKGCONFIG=YES \
-        -D OPENCV_EXTRA_MODULES_PATH=$HOME_DIRECTORY/opencv_contrib/modules \
+        -D OPENCV_EXTRA_MODULES_PATH=~/opencv_contrib/modules \
         -D BUILD_opencv_java=OFF \
         -D BUILD_opencv_python=OFF \
         -D WITH_FFMPEG=1 \
@@ -78,19 +73,15 @@ if [[ $1 = "FULL" ]] || [[ $1 = "OPENCV" ]]; then
 fi
 
 ## Go to the project.
-cd ~/build/cisco/goFish/ || exit
+#cd ~/goFish || exit
 
-if [[ $1 = "FULL" ]]; then
-    cd static/ || exit
-    mkdir temp
-    mkdir videos
-    mkdir video-info
-    mkdir proc_videos
-    mkdir calibrate
-    cd ../ || exit
-fi
-
-## Build all components.
-./build.sh
-
+#if [[ $1 = "FULL" ]]; then
+#    cd static/ || exit
+#    mkdir -p temp
+#    mkdir -p videos
+#    mkdir -p video-info
+#    mkdir -p proc_videos
+#    mkdir -p calibrate
+#    cd ../ || exit
+#fi
 

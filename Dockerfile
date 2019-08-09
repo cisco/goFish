@@ -1,11 +1,10 @@
-FROM alpine:3.8
+FROM golang:1.12.7-stretch
 LABEL maintainer="Tomas Rigaux"
 
-RUN mkdir /goFish
+ADD setup.sh /
+RUN /setup.sh FULL
+
+RUN mkdir -p /goFish
 COPY . /goFish
 
-EXPOSE 3300
-
-RUN ./goFish/setup.sh FULL
-
-CMD ["./goFish/GoFish", "3300"]
+CMD ["/goFish/build.sh"]
