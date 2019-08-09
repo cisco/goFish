@@ -1,4 +1,6 @@
 #!/bin/bash
+cd /goFish
+
 ## Build Go
 cd goServer || exit
 go build
