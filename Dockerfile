@@ -7,4 +7,6 @@ RUN /setup.sh FULL
 RUN mkdir -p /goFish
 COPY . /goFish
 
+RUN /goFish/build.sh
+
 CMD ["/goFish/build.sh"]
