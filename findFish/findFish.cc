@@ -31,7 +31,7 @@ int main(int argc, char** argv)
             try 
             {
                 Processor p;
-                p.TriangulatePoints("calib_config/measure_points.yaml", "StereoCalibration.yaml");
+                p.TriangulatePoints("calib_config/measure_points.yaml", "stereo_calibration.yaml");
             } 
             catch (const std::exception& e) 
             {
@@ -70,9 +70,9 @@ int main(int argc, char** argv)
         }
         std::sort(video_files.begin(), video_files.end());
 
-#ifdef THREADED
         if(argv[1] == NULL)
         {
+        #ifdef THREADED
             std::vector<std::thread> threads;
             threads.resize(video_files.size());
             for (size_t i = 0; i < video_files.size() / 2; i++)
@@ -85,13 +85,11 @@ int main(int argc, char** argv)
             for(auto& thread : threads)
                 if(thread.joinable()) thread.join();
 
-            // TODO: Should check to make sure processing was succesful.
+            // TODO: Should check to make sure processing was successful.
             if(video_files.size() > 1)
                 for(std::string video : video_files)
                     std::remove(video.c_str());
-        }
-#else
-        if(argv[1] == NULL)
+        #else
             for (size_t i = 0; i < video_files.size() / 2; i += 2)
                 try
                 {
@@ -108,7 +106,8 @@ int main(int argc, char** argv)
                 {
                     std::cerr << e.what() << '\n';
                 }
-#endif
+        #endif
+        }
 
     } while (bHasVideos);
 
