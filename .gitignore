@@ -50,3 +50,5 @@ static/video-info/
 static/proc_videos/
 static/temp/
 static/calibrate/
+tests/build/
+goServer/goServer

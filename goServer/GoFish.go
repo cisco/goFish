@@ -44,6 +44,8 @@ func main() {
 	os.Setenv("calibImgFolder", "81405876091")
 	os.Setenv("calibResultFolder", "81406022555")
 
+	os.Setenv("calib_config", "calib_config/")
+
 	goFish := &GoFish{NewServer(), NewBox("private_config/box_jwt.json"), ""}
 
 	go goFish.ProcessAndUploadVideos("./static/videos/")
@@ -187,7 +189,7 @@ func (goFish *GoFish) CalibrateCameras() {
 			empty, _, err = IsDirEmpty(os.Getenv("rightCameraDir"))
 			if err == nil {
 				if !empty {
-					goFish.RunProcess("./Calibrate", os.Getenv("leftCameraDir"), os.Getenv("rightCameraDir"))
+					goFish.RunProcess("./FishFinder", "CALIBRATE", os.Getenv("leftCameraDir"), os.Getenv("rightCameraDir"))
 					err = os.RemoveAll(os.Getenv("leftCameraDir"))
 					if err != nil {
 						log.Println(err)
@@ -418,57 +420,60 @@ func (goFish *GoFish) HandleRulerHTML(r *http.Request) interface{} {
 // GetFishInfo : Gets all the info required to fill out the info form for
 // identifying animals.
 func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
-	if goFish.server.DB.db != nil {
+	if goFish.server.DB != nil {
+		if goFish.server.DB.db != nil {
 
-		result, err := goFish.server.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
-		if err != nil {
-			log.Println(err)
-			return struct{}{}
-		}
-		defer result.Close()
-
-		// IDName : Struct with a combo of ID and Name.
-		type IDName struct {
-			ID   int
-			Name string
-		}
-
-		family := make([]IDName, 0)
-		genera := make([]IDName, 0)
-		species := make([]IDName, 0)
-		for result.Next() {
-
-			var f, g, s string
-			var fid, gid, sid int
-			err = result.Scan(&f, &fid, &g, &gid, &s, &sid)
+			result, err := goFish.server.DB.Query("SELECT f.name, f.fid, g.name, g.gid, s.name, s.sid FROM fish, family AS f, genus AS g, species AS s WHERE fish.fid = f.fid AND fish.gid = g.gid AND fish.sid = s.sid;")
 			if err != nil {
-				panic(err)
+				log.Println(err)
+				return struct{}{}
 			}
-			family = append(family, IDName{fid, f})
-			genera = append(genera, IDName{gid, g})
-			species = append(species, IDName{sid, s})
-		}
+			defer result.Close()
 
-		var fileNames []string
-		files, err := ioutil.ReadDir("./static/proc_videos/")
+			// IDName : Struct with a combo of ID and Name.
+			type IDName struct {
+				ID   int
+				Name string
+			}
 
-		if err == nil {
-			for _, file := range files {
-				if file.Name() != ".DS_Store" {
-					fileNames = append(fileNames, file.Name())
+			family := make([]IDName, 0)
+			genera := make([]IDName, 0)
+			species := make([]IDName, 0)
+			for result.Next() {
+
+				var f, g, s string
+				var fid, gid, sid int
+				err = result.Scan(&f, &fid, &g, &gid, &s, &sid)
+				if err != nil {
+					panic(err)
+				}
+				family = append(family, IDName{fid, f})
+				genera = append(genera, IDName{gid, g})
+				species = append(species, IDName{sid, s})
+			}
+
+			var fileNames []string
+			files, err := ioutil.ReadDir("./static/proc_videos/")
+
+			if err == nil {
+				for _, file := range files {
+					if file.Name() != ".DS_Store" {
+						fileNames = append(fileNames, file.Name())
+					}
 				}
 			}
-		}
 
-		return struct {
-			Family  []IDName
-			Genera  []IDName
-			Species []IDName
-		}{
-			family,
-			genera,
-			species,
+			return struct {
+				Family  []IDName
+				Genera  []IDName
+				Species []IDName
+			}{
+				family,
+				genera,
+				species,
+			}
 		}
+		return nil
 	}
 	return nil
 }
@@ -476,7 +481,7 @@ func (goFish *GoFish) GetFishInfo(r *http.Request) interface{} {
 // GetWorldPoints : Retrieves world points and sends them to the client to be
 // measured.
 func (goFish *GoFish) GetWorldPoints(r *http.Request) interface{} {
-	file, err := ioutil.ReadFile("calib_config/object_points.yaml")
+	file, err := ioutil.ReadFile(os.Getenv("calib_config") + "object_points.yaml")
 	if err != nil {
 		return nil
 	}
@@ -494,6 +499,7 @@ func (goFish *GoFish) GetFilenames(r *http.Request) interface{} {
 
 	if err != nil {
 		log.Println(err)
+		return nil
 	}
 
 	var fileNames []string
@@ -501,7 +507,7 @@ func (goFish *GoFish) GetFilenames(r *http.Request) interface{} {
 		fileNames = append(fileNames, v.Name)
 	}
 	if len(fileNames) == 0 {
-		return nil
+		return struct{ Names []string }{}
 	}
 
 	return struct{ Names []string }{fileNames}

@@ -25,8 +25,9 @@ Tracker::~Tracker()
 
 void Tracker::CreateMask(cv::Mat& frame)
 {
-    // Background subtraction method.
+    if(!frame.empty())
     {
+        // Background subtraction method.
         bkgd_sub_ptr->apply(frame, _mask);
 
         int sigmaX = 10, sigmaY = 10, ksize = 9;
@@ -40,18 +41,18 @@ void Tracker::CreateMask(cv::Mat& frame)
         cv::erode(_mask, _mask, kernel, cv::Point(sigmaX, sigmaY));
 
         cv::threshold(_mask, _mask, Config.MinThreshold, Config.MaxThreshold, cv::THRESH_BINARY);
-    }
-
-    /*
-    // Haar Cascade method.
-    for(auto cascade : cascades)
-    {
-        std::vector<cv::Rect> objects;
-        cascade.second->detectMultiScale(frame, objects);
-    }
-    */
     
-    GetObjectContours(frame);
+        /*
+        // Haar Cascade method.
+        for(auto cascade : cascades)
+        {
+            std::vector<cv::Rect> objects;
+            cascade.second->detectMultiScale(frame, objects);
+        }
+        */
+
+        GetObjectContours(frame);
+    }
 }
 
 void Tracker::GetObjectContours(cv::Mat& frame)

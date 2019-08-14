@@ -6,6 +6,7 @@
 #include <thread>
 
 #include "resources/includes/Processor.h"
+#include "resources/includes/Calibration.h"
 
 using namespace std;
 
@@ -37,6 +38,23 @@ int main(int argc, char** argv)
             {
                 std::cerr << e.what() << '\n';
             }
+        else if (std::string(argv[1]) == "CALIBRATE" )
+        try
+        {
+            Calibration::Input input;
+            input.image_size = cv::Size(1920, 1440);
+
+            Calibration calib(input, CalibrationType::STEREO, "stereo_calibration.yaml");
+            
+            calib.ReadImages(argv[2], argv[3]);
+            calib.RunCalibration();
+            //calib->GetUndistortedImage();
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+        }
+        
 
         return 0;
     }

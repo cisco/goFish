@@ -1,5 +1,10 @@
 # goFish | Finding Fish
+[![license](https://img.shields.io/badge/license-BSD%202--Clause-blue)](https://github.com/cisco/goFish/blob/master/LICENSE)
+[![Build Status](https://travis-ci.com/cisco/goFish.svg)](https://travis-ci.com/cisco/goFish)
+
 An open source project for using stereo vision to Identify, Count, and Measure fish in the oceans.
+
+[![dockerhub](https://img.shields.io/badge/dockerhub-ghostofcookie%2Fgofish-informational?style=for-the-badge&logo=docker)](https://hub.docker.com/r/ghostofcookie/gofish)
 
 ---
 
@@ -16,22 +21,12 @@ If you are setting up on a local machine, then skip to step 2.
 ---
 
 ## Setup
-#### Dependencies
-To set up the project, simply take a look at ```setup.sh```. If you are setting up on a new system, then you will need to run the full setup, or at least install OpenCV. Otherwise, you can just build the project itself.
+There are 2 different workflows for this project. It can be setup, built, and tested using either [Docker](#docker), or else it can all be handled [manually](#manual).
 
-First, check the constants are correct (modify them as needed, though OpenCV version should NOT be lower than 4.0.0)
-```bash
-HOME_DIRECTORY=<home_directory>
-PROJECT_DIRECTORY=~/<project_directory>
-OPENCV_VERSION=4.1.0
-```
-Once you are satisfied with the above, then you'll need to run the setup.
-- Full Installation: ```./setup.sh FULL``` (installs all dependencies [cmake, gcc, g++, golang-go], and opencv)
-- Install OpenCV: ```./setup.sh OPENCV``` (installs the specified version of opencv)
-- Regular Setup : ```./setup.sh```
+No matter which method you choose, there are still some requirements that need to be met before the project will run properly:
+- Setup an app with the [Box](#box) API, and authorize it in the [Box Admin Console](https://app.box.com/master).
 
-#### Build
-If you ran the ```setup.sh``` script then you don't need to worry about this part. If you did not need to install any of the extra dependencies mentioned above, then to build all components of the project run ```./build.sh``` from the main project directory. This will build all Go files and compile all C++ files.
+### Required
 
 #### Box
 This application uses the Box API to backup files and reduce storage requirements on the server itself. Thus, to use the service, we need to setup an authentication process with our Box App.
@@ -64,6 +59,73 @@ This application uses the Box API to backup files and reduce storage requirement
     ```
     No matter which option you chose, save the settings file in "private_config" as "box_jwt.json". You need to create the folder "private_config" in the root of the project folder (i.e. ~/<project_directory>/goFish/private_config).
 
+
+### Docker
+The Docker image is already built and saved in [DockerHub](https://hub.docker.com/r/ghostofcookie/gofish), which means that there is no need to worry about dependencies, as they have already been installed inside the image. All that is left is to build and test the project.
+
+To build the Docker image, first pull the latest version
+```bash
+docker pull ghostofcookie/gofish:latest
+```
+
+Then, navigate to the project root directory, then build the image
+```bash
+docker build -t ghostofcookie/gofish:<tag> .
+```
+
+To build the project inside of Docker, simply run
+```bash
+docker run ghostofcookie/gofish:<tag> /goFish/build.sh
+```
+
+To run tests for Go and C++, use
+```bash
+docker run ghostofcookie/gofish:<tag> /goFish/run_tests.sh
+```
+
+### Manual
+If you do not wish to use the docker setup, then the following section covers how to get setup with all of the appropriate dependencies, as well as how to build and test the whole project.
+
+#### Dependencies
+To set up the project, simply take a look at ```setup.sh```. If you are setting up on a new system, then you will need to run the full setup, or at least install OpenCV. Otherwise, you can just build the project itself.
+
+To setup the project with dependencies, run one of the following:
+- Full Installation: ```./setup.sh FULL``` (installs all dependencies [cmake, gcc, g++, golang-go], and opencv)
+- Install OpenCV: ```./setup.sh OPENCV``` (installs the specified version of opencv)
+- Regular Setup : ```./setup.sh```
+
+#### Build
+First, make sure you have all dependencies installed (see [above](#dependencies)). To build the entire project, use the ```build.sh``` script, by simply running
+
+```bash
+./build.sh
+```
+
+To build only the Go files, navigate to the ```goServer/``` directory, and run ```go build```.
+
+To build only the C++ files, navigate to ```findFish/```, and run 
+```bash
+mkdir -p build
+cd build
+cmake .. && make
+```
+This will compile the entire project (Go and C++ alike).
+
+To run tests for the entire project, simply run
+
+```bash
+./run_tests.sh
+```
+
+To test only the Go files, navigate to the ```goServer/``` directory, and run ```go test```.
+
+To test only the C++ files, navigate to ```tests/```, and run 
+```bash
+mkdir -p build
+cd build
+cmake .. && make
+./run_tests
+```
 
 ---
 

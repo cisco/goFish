@@ -500,11 +500,12 @@ func (box *Box) GetFolderItems(folderID string, limit int, offset int) (*ItemCol
 }
 
 // DeleteFolder : Deletes the folder with 'ID' folderID.
-func (box *Box) DeleteFolder(folderID string) {
+func (box *Box) DeleteFolder(folderID string) error {
 	box.RequestAccessToken()
 	_, err := box.HTTPRequest("DELETE", "https://api.box.com/2.0/folders/"+folderID+"?recursive=true", nil, nil)
 	if err != nil {
 		log.Println(err)
-		return
+		return err
 	}
+	return nil
 }
