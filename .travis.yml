@@ -1,0 +1,13 @@
+language: go
+
+services:
+  - docker
+
+script: 
+  - docker pull ghostofcookie/gofish:latest
+  # TODO: Figure out why TravisCI always reinstalls dependencies after successful pull.
+  #- docker build --cache-from ghostofcookie/gofish:latest -t ghostofcookie/gofish:latest .
+  - docker run ghostofcookie/gofish:latest /goFish/build.sh
+  - docker run ghostofcookie/gofish:latest /goFish/run_tests.sh
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker push ghostofcookie/gofish:latest

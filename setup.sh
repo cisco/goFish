@@ -15,7 +15,7 @@ fi
 if [[ $1 = "FULL" ]]; then
     ## Linux
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
-         apt-get -y install cmake git gcc g++ golang-go python3
+         apt-get -y install cmake git gcc g++ golang-go python3 libcppunit-dev
     ## Mac OSX
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         brew install cmake

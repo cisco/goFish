@@ -3,133 +3,135 @@
 #include <cstdlib>
 
 JSON::JSON(std::string ObjectName)
-: json_string_{ "{}" }, name_{ ObjectName } {}
+: _json_string{ "{}" }, _name{ ObjectName } 
+{
+}
 
 JSON::JSON(const JSON& j)
 {
-    this->name_ = j.name_;
-    this->json_string_ = j.json_string_;
-    this->subobjects_ = j.subobjects_;
+    this->_name = j._name;
+    this->_json_string = j._json_string;
+    this->_key_val_pairs = j._key_val_pairs;
 }
 
 JSON::~JSON()
 {
-    this->json_string_ = "";
-    this->name_ = "";
-    this->subobjects_.clear();
+    this->_json_string = "";
+    this->_name = "";
+    this->_key_val_pairs.clear();
 }
 
 JSON::JSON(std::string ObjectName, std::map<std::string, std::string> Object)
 {
-    name_ = ObjectName;
-    json_string_ = "{";
-    
-    json_string_ += "\"" + name_ + "\" : {";
-    auto it = Object.begin();
-    for(auto e : Object)
-    {
-        ++it;
-        json_string_ += "\"" + e.first + "\"";
-        json_string_ += ":";
-
-        // Check to see if the value is a number. if not, wrap it in quotations.
-        char* err;
-        std::strtod(e.second.c_str(), &err);
-        if(*err == '\0') json_string_ += e.second;
-        else json_string_ += "\"" + e.second + "\"";
-
-        // If it's not the last item, add a comma to continue the list.
-        if(it != Object.end()) json_string_ += ",";
-    }
-    json_string_ += "}";
-
-    json_string_ += "}";
+    _name = ObjectName;
+    _key_val_pairs = Object;
+    BuildJSONObject();
 }
 
 // Potentially interesting way to dynamically add numerous events. Might need some research.
 JSON::JSON(std::string ObjectName, JSON Objects...)
 {
-    name_ = ObjectName;
-    json_string_ = "{";
-    json_string_ += "\"" + name_ + "\" : ";
+    _name = ObjectName;
+    _json_string += "\"" + _name + "\" : ";
     va_list args;
     va_start(args, Objects);
 
    // JSON e = va_arg(args, JSON);
-   // json_string_ += e.GetJSON();
+   // _json_string += e.GetJSON();
 
     va_end(args);
-    json_string_ += "}";
 }
 
 void JSON::AddKeyValue(std::string Key, std::string Value)
 {
-    subobjects_.insert(std::make_pair(Key, Value));
-}
-void JSON::AddObject(JSON Object)
-{
-    if(Object.GetJSON() != "{}")
-        subobjects_.insert(make_pair(Object.GetName(), Object.GetJSON()));
+    _key_val_pairs.insert(std::make_pair(Key, Value));
 }
 
 void JSON::AddObject(JSON& Object)
 {
     if(Object.GetJSON() != "{}")
-        subobjects_.insert(make_pair(Object.GetName(), Object.GetJSON()));
+        _subobjects.push_back(Object);
+}
+
+void JSON::AddObject(const JSON& Object)
+{
+    if(Object.GetJSON() != "{}")
+        _subobjects.push_back(Object);
 }
 
 void JSON::BuildJSONObject()
 {
-    json_string_ = "{";
-
-    json_string_ += "\"" + name_ + "\" : {";
-    auto it = subobjects_.begin();
-    for(auto e : subobjects_)
+    _json_string = "{";
+    auto it = _key_val_pairs.begin();
+    for(auto e : _key_val_pairs)
     {
         ++it;
-        json_string_ += e.second;
-        if(it != subobjects_.end()) json_string_ += ",";
+        _json_string += "\"" + e.first + "\":";
+        
+        char* err;
+        std::strtod(e.second.c_str(), &err);
+        _json_string += *err == '\0' ? e.second : "\"" + e.second + "\"";
+
+        if(it != _key_val_pairs.end()) _json_string += ",";
     }
-    json_string_ += "}";
 
-    json_string_ += "}";
-
+    auto jt = _subobjects.begin();
+    if(!_key_val_pairs.empty() && it != _key_val_pairs.end()) _json_string += ",";
+    for(auto e : _subobjects)
+    {
+        ++jt;
+        _json_string += e.GetJSON().substr(1, e.GetJSON().size() - 2);
+        if(jt != _subobjects.end()) _json_string += ",";
+    }
+    
+    _json_string += "}";
 }
 
 void JSON::BuildJSONObjectArray()
 {
-    json_string_ = "{";
-
-    json_string_ += "\"" + name_ + "\" : [";
-    auto it = subobjects_.begin();
-    for(auto e : subobjects_)
+    _json_string = "[";
+    auto it = _key_val_pairs.begin();
+    for(auto e : _key_val_pairs)
     {
         ++it;
-        json_string_ += e.second;
-        if(it != subobjects_.end()) json_string_ += ",";
+        _json_string += "{\"" + e.first + "\":";
+        
+        char* err;
+        std::strtod(e.second.c_str(), &err);
+        _json_string += *err == '\0' ? e.second : "\"" + e.second + "\"";
+        _json_string += "}";
+        if(it != _key_val_pairs.end()) _json_string += ",";
     }
-    json_string_ += "]";
 
-    json_string_ += "}";
+    auto jt = _subobjects.begin();
+    if(!_key_val_pairs.empty() && it != _key_val_pairs.end()) _json_string += ",";
+    for(auto e : _subobjects)
+    {
+        ++jt;
+        _json_string += e.GetJSON();
+        if(jt != _subobjects.end()) _json_string += ",";
+    }
+    _json_string += "]";
 }
 
 std::string JSON::GetJSON() const
 {
-    return this->json_string_;
+    
+    return this->_name != "" ? "{\"" + this->_name + "\":" + this->_json_string + "}" : "{}";
 }
 
 std::string JSON::GetName() const
 {
-    return this->name_;
+    return this->_name;
 }
 
 std::vector<std::string> JSON::GetSubobjectNames()
 {
     std::vector<std::string> tempNames;
-    for(auto o : subobjects_)
+    for(auto o : _key_val_pairs)
         if(o.first != "") tempNames.push_back(o.first);
+    for(auto o : _subobjects)
+        if(o.GetName() != "") tempNames.push_back(o.GetName());
     
     return tempNames;
 }
-
-

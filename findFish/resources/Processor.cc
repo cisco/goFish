@@ -55,92 +55,110 @@ Processor::~Processor()
 
 void Processor::ProcessVideos()
 {
-    auto time_start = cv::getTickCount();
-    std::string file_name = "";
-    if (_videos[0]->FileName == _videos[1]->FileName)
+    try
     {
-        // Create a save location for the new combined video.
-        file_name = "./static/proc_videos/" + _videos[0]->FileName + ".mp4";
-        std::cout << "=== Creating \"" << file_name << "\" ===" << std::endl;
+        if(!_videos[0] || !_videos[1])
+            throw std::runtime_error("One or more videos is null");
 
-        // Setup QR Code detection events for the left and right _videos.
-        if (!SyncVideos())
-            throw std::runtime_error("Videos did not sync. Either they are "
-                                     "missing QR code(s), or none were detected.");
-
-        // Create a writer for the new combined video.
-        cv::VideoWriter writer(
-            file_name,
-            _videos[0]->FOURCC,
-            _videos[0]->FPS,
-            cv::Size(_videos[0]->Width + _videos[1]->Width,
-                     std::max(_videos[0]->Height, _videos[1]->Height)),
-            true);
-
-        int frame_num = 0;
-        while (!_videos[0]->Ended() && !_videos[1]->Ended())
+        auto time_start = cv::getTickCount();
+        std::string file_name = "";
+        if (_videos[0]->FileName == _videos[1]->FileName &&
+        (_videos[0]->FileName != "" || _videos[1]->FileName != ""))
         {
-            std::shared_ptr<cv::Mat> frames[2];
-            for(int i = 0; i < 2; i++)
-                _videos[i]->Read();
-            
-            if(_videos[0]->Get() && _videos[1]->Get())
+            // Create a save location for the new combined video.
+            file_name = "./static/proc_videos/" + _videos[0]->FileName + ".mp4";
+            std::cout << "=== Creating \"" << file_name << "\" ===" << std::endl;
+
+            // Setup QR Code detection events for the left and right _videos.
+            if (!SyncVideos())
+                throw std::runtime_error("Videos did not sync. Either they are "
+                                        "missing QR code(s), or none were detected.");
+
+            // Create a writer for the new combined video.
+            cv::VideoWriter writer(
+                file_name,
+                _videos[0]->FOURCC,
+                _videos[0]->FPS,
+                cv::Size(_videos[0]->Width + _videos[1]->Width,
+                        std::max(_videos[0]->Height, _videos[1]->Height)),
+                true);
+
+            int frame_num = 0;
+            while (!_videos[0]->Ended() && !_videos[1]->Ended())
             {
+                std::shared_ptr<cv::Mat> frames[2];
                 for(int i = 0; i < 2; i++)
+                    _videos[i]->Read();
+                
+                if(_videos[0]->Get() && _videos[1]->Get())
                 {
-                    // Undistort the frames using camera calibration data.
-                    frames[i] = _videos[i]->Get();
-                    UndistortImage(*frames[i], 0);
+                    for(int i = 0; i < 2; i++)
+                    {
+                        // Undistort the frames using camera calibration data.
+                        frames[i] = _videos[i]->Get();
+                        UndistortImage(*frames[i], 0);
 
-                    // Run the tracker on the undistorted frames.
-                    _tracker->CreateMask(*frames[i]);
-                    _tracker->CheckForActivity(frame_num);
+                        // Run the tracker on the undistorted frames.
+                        _tracker->CreateMask(*frames[i]);
+                        _tracker->CheckForActivity(frame_num);
+                    }
+
+                    // Write the concatenated undistorted frames.
+                    cv::Mat res = ConcatenateMatrices(*frames[0], *frames[1]);
+                    writer << res;
+                    frame_num++;
                 }
-
-                // Write the concatenated undistorted frames.
-                cv::Mat res = ConcatenateMatrices(*frames[0], *frames[1]);
-                writer << res;
-                frame_num++;
             }
+
+            cv::destroyAllWindows();
+            
+            std::cout << "=== Finished Concatenating ===\n";
+            std::cout << "=== Time taken: " << (double)(cv::getTickCount() - time_start)/cv::getTickFrequency() << " seconds ===\n";
+
+            AssembleEvents(frame_num);
+
+            // Construct the JSON object array of all events detected.
+            _detected_events->BuildJSONObjectArray();
+
+            // Create the JSON file for this video.
+            std::ofstream configFile;
+            configFile.open("static/video-info/DE_" + _videos[0]->FileName + ".json");
+            configFile << _detected_events->GetJSON();
+            configFile.close();
+
+            std::cout << "=== Finished Processing for \"" << file_name << "\" ===\n";
+            Success = true;
         }
-
-        cv::destroyAllWindows();
-        
-        std::cout << "=== Finished Concatenating ===\n";
-        std::cout << "=== Time taken: " << (double)(cv::getTickCount() - time_start)/cv::getTickFrequency() << " seconds ===\n";
-
-        AssembleEvents(frame_num);
-
-        // Construct the JSON object array of all events detected.
-        _detected_events->BuildJSONObjectArray();
-
-        // Create the JSON file for this video.
-        std::ofstream configFile;
-        configFile.open("static/video-info/DE_" + _videos[0]->FileName + ".json");
-        configFile << _detected_events->GetJSON();
-        configFile.close();
-
-        std::cout << "=== Finished Processing for \"" << file_name << "\" ===\n";
-        Success = true;
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << " !> " << e.what() << '\n';
     }
 }
 
 void Processor::TriangulatePoints(std::string points_file, std::string calib_file)
 {
-    Calibration::Input input;
-    std::vector<std::vector<cv::Point2f> > keypoints_l, keypoints_r;
+    try
     {
-        cv::FileStorage fs(points_file, cv::FileStorage::READ);
-        ReadVectorOfVector(fs, "keypoints_left", keypoints_l);
-        ReadVectorOfVector(fs, "keypoints_right", keypoints_r);
+        Calibration::Input input;
+        std::vector<std::vector<cv::Point2f> > keypoints_l, keypoints_r;
+        {
+            cv::FileStorage fs(points_file, cv::FileStorage::READ);
+            ReadVectorOfVector(fs, "keypoints_left", keypoints_l);
+            ReadVectorOfVector(fs, "keypoints_right", keypoints_r);
 
-        input.image_points[0] = keypoints_l;
-        input.image_points[1] = keypoints_r;
+            input.image_points[0] = keypoints_l;
+            input.image_points[1] = keypoints_r;
+        }
+        
+        _calib->_input = input;
+        _calib->ReadCalibration();
+        _calib->TriangulatePoints();
     }
-    
-    _calib->_input = input;
-    _calib->ReadCalibration();
-    _calib->TriangulatePoints();
+    catch(const std::exception& e)
+    {
+        std::cerr << " !> " << e.what() << '\n';
+    }
 }
 
 void Processor::UndistortImage(cv::Mat& frame, int index) const
@@ -183,7 +201,8 @@ bool Processor::SyncVideos() const
 Video::Video(std::string file)
     : FileName{""}, Frame{0}, TotalFrames{0}, _filepath{file}
 {
-    try {
+    try
+    {
         FileName = _filepath.substr(_filepath.find_last_of("/") + 1, _filepath.length());
         FileName = FileName.substr(0,FileName.find_last_of("_"));
         
@@ -196,7 +215,9 @@ Video::Video(std::string file)
         Height      = _vid_cap->get(cv::CAP_PROP_FRAME_HEIGHT);
         FPS         = _vid_cap->get(cv::CAP_PROP_FPS);
         FOURCC      = _vid_cap->get(cv::CAP_PROP_FOURCC);
-    } catch(std::exception& e) {
+    } 
+    catch(std::exception& e)
+    {
         std::cerr << " !> " << e.what() << std::endl;
     }
 }

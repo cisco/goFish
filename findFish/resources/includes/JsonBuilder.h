@@ -44,13 +44,13 @@ class JSON
    /// \parampin] Value The value associated with the key.
    void AddKeyValue(std::string Key, std::string Value);
 
-   /// Adds a new JSON Object to this JSON.
-   /// \param[in] obj The JSON object to be appended.
-   void AddObject(JSON obj);
-
    /// Adds a premade JSON Object to this JSON.
    /// \param[in, out] obj The JSON object to be appended.
    void AddObject(JSON& obj);
+
+   /// Adds a new JSON Object to this JSON.
+   /// \param[in, out] obj The JSON object to be appended.
+   void AddObject(const JSON& obj);
 
    /// Builds the formatted JSON object as valid JSON.
    void BuildJSONObject();
@@ -72,8 +72,9 @@ class JSON
     
 
  private:
-    std::string json_string_;
-    std::string name_;
-    std::map<std::string, std::string> subobjects_;
+    std::string _json_string;
+    std::string _name;
+    std::map<std::string, std::string> _key_val_pairs;
+    std::vector<JSON> _subobjects;
 };
 

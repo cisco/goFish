@@ -13,7 +13,11 @@ std::vector<std::string> SplitString(std::string& str, const char* delimiter);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Event Builder Base Class
-EventBuilder::EventBuilder() : _start_frame{ -1 }, _end_frame{ -1 } {}
+EventBuilder::EventBuilder() 
+    : _start_frame{ -1 }, _end_frame{ -1 }
+{
+    _json_object = std::make_unique<JSON>("");
+}
 
 EventBuilder::~EventBuilder() {}
 

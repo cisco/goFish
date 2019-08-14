@@ -2,7 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"log"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // Database : A structure for holding relevant DB information.
@@ -57,9 +60,12 @@ func (db_ptr *Database) Execute(query string, args ...interface{}) (sql.Result, 
 
 // Query : Wrapper function for querying SQL.
 func (db_ptr *Database) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	err := db_ptr.db.Ping()
-	if err != nil {
-		return nil, err
+	if db_ptr.db != nil {
+		err := db_ptr.db.Ping()
+		if err != nil {
+			return nil, err
+		}
+		return db_ptr.db.Query(query)
 	}
-	return db_ptr.db.Query(query)
+	return nil, errors.New("no database object")
 }
