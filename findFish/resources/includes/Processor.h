@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <queue>
 #include <memory>
 #include <mutex>
 
@@ -20,6 +21,10 @@ class Tracker;
 class JSON;
 class Video;
 class Calibration;
+class Calibrator;
+class Camera;
+
+#define CALIB
 
 /// \brief Goes through two videos to find events and concatenate them together.
 ///
@@ -28,8 +33,18 @@ class Calibration;
 /// events from the video.
 class Processor
 {
+  struct Process {
+    std::shared_ptr<Video> videos[2];
+    std::shared_ptr<Camera> cameras[2];
+    std::vector<cv::Mat> frames;
+    std::shared_ptr<JSON> events;
+  };
+
 public:
   Processor();
+  #ifdef CALIB
+  Processor(std::shared_ptr<Camera>, std::shared_ptr<Camera>);
+  #endif
   Processor(std::string, std::string);
   ~Processor();
 
@@ -43,6 +58,11 @@ public:
   /// \param[in] points_file The file which contains the left and right points.
   /// \param[in] calib_file The file which contains the stereo calibration data.
   void TriangulatePoints(std::string points_file, std::string calib_file);
+
+  void AddVideos(std::string, std::string);
+  void RunProcesses();
+  void AnalyzeVideos(std::shared_ptr<Process>&);
+  void WriteVideo(std::shared_ptr<Process>&);
 
 private:
   /// Undistorts the given frame using calibration data for camera at index.
@@ -62,10 +82,18 @@ public:
   bool Success;
 
 private:
-  std::unique_ptr<Video>        _videos[2];
-  std::unique_ptr<Tracker>      _tracker;
-  std::shared_ptr<JSON>         _detected_events;
+  std::unique_ptr<Video> _videos[2];
+  std::unique_ptr<Tracker> _tracker;
+  std::shared_ptr<JSON> _detected_events;
+
+  std::queue<std::shared_ptr<Process>> _buffer;
+
+
+#ifndef CALIB
   std::shared_ptr<Calibration>  _calib;
+#else
+  std::shared_ptr<Calibrator>  _calib;
+#endif
 
 };
 

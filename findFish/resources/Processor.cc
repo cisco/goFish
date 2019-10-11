@@ -4,11 +4,13 @@
 #include "includes/Calibration.h"
 #include "includes/Tracker.h"
 
+#include "Camera/CalibratorFactory.h"
+
 #include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <time.h>
-#include <stdexcept>
+#include <thread>
 
 cv::Mat ConcatenateMatrices(cv::Mat&, cv::Mat&);
 void ReadVectorOfVector(cv::FileStorage&, std::string, std::vector<std::vector<cv::Point2f>>&);
@@ -18,10 +20,20 @@ Processor::Processor()
 {
     Calibration::Input input;
     input.image_size = cv::Size(1920, 1440);
-
+#ifndef CALIB
     _calib = std::make_shared<Calibration>(input, CalibrationType::STEREO, "stereo_calibration.yaml");
     _calib->ReadCalibration();
+#endif
 }
+
+#ifdef CALIB
+Processor::Processor(std::shared_ptr<Camera>c1, std::shared_ptr<Camera> c2)
+    : Success{false}
+{
+    _calib = CalibratorFactory::MakeCalibrator(c1, c2);
+    _calib->RunCalibration();
+}
+#endif
 
 Processor::Processor(std::string left_file, std::string right_file)
     : Success{false}
@@ -42,11 +54,18 @@ Processor::Processor(std::string left_file, std::string right_file)
         _detected_events = std::make_shared<JSON>("DetectedEvents");
     }
 
+#ifndef CALIB
     Calibration::Input input;
     input.image_size = cv::Size(1920, 1440);
 
     _calib = std::make_shared<Calibration>(input, CalibrationType::STEREO, "stereo_calibration.yaml");
     _calib->ReadCalibration();
+#else
+    auto left_cam = std::make_shared<Camera>(_videos[0]->FileName);
+    auto right_cam = std::make_shared<Camera>(_videos[1]->FileName);
+    _calib = CalibratorFactory::MakeCalibrator(left_cam, right_cam);
+    _calib->RunCalibration();
+#endif
 }
 
 Processor::~Processor()
@@ -63,7 +82,7 @@ void Processor::ProcessVideos()
         auto time_start = cv::getTickCount();
         std::string file_name = "";
         if (_videos[0]->FileName == _videos[1]->FileName &&
-        (_videos[0]->FileName != "" || _videos[1]->FileName != ""))
+            (_videos[0]->FileName != "" || _videos[1]->FileName != ""))
         {
             // Create a save location for the new combined video.
             file_name = "./static/proc_videos/" + _videos[0]->FileName + ".mp4";
@@ -96,9 +115,13 @@ void Processor::ProcessVideos()
                     {
                         // Undistort the frames using camera calibration data.
                         frames[i] = _videos[i]->Get();
+                        #ifndef CALIB
                         UndistortImage(*frames[i], 0);
+                        #else
+                        _calib->UndistortImages(*frames[i].get());
+                        #endif
 
-                        // Run the tracker on the undistorted frames.
+                        // Run the t on the undistorted frames.
                         _tracker->CreateMask(*frames[i]);
                         _tracker->CheckForActivity(frame_num);
                     }
@@ -113,7 +136,8 @@ void Processor::ProcessVideos()
             cv::destroyAllWindows();
             
             std::cout << "=== Finished Concatenating ===\n";
-            std::cout << "=== Time taken: " << (double)(cv::getTickCount() - time_start)/cv::getTickFrequency() << " seconds ===\n";
+            std::cout << "=== Time taken: ";
+            std::cout << (double)(cv::getTickCount() - time_start)/cv::getTickFrequency() << " seconds ===\n";
 
             AssembleEvents(frame_num);
 
@@ -150,10 +174,11 @@ void Processor::TriangulatePoints(std::string points_file, std::string calib_fil
             input.image_points[0] = keypoints_l;
             input.image_points[1] = keypoints_r;
         }
-        
+#ifndef CALIB
         _calib->_input = input;
         _calib->ReadCalibration();
         _calib->TriangulatePoints();
+#endif
     }
     catch(const std::exception& e)
     {
@@ -161,9 +186,143 @@ void Processor::TriangulatePoints(std::string points_file, std::string calib_fil
     }
 }
 
+void Processor::AddVideos(std::string v1, std::string v2)
+{
+    std::shared_ptr<Video> t[2] = { std::make_shared<Video>(v1),
+                                    std::make_shared<Video>(v2) };
+    Process p;
+    for (int i = 0; i < 2; i++)
+        p.videos[i] = std::move(t[i]);
+
+    _buffer.push(std::make_shared<Process>(p));
+    std::cout << "ADDED " << _buffer.back()->videos[0]->FileName << " TO BUFFER | ["<<_buffer.size()<<"]\n";
+
+}
+
+void Processor::RunProcesses()
+{
+    std::mutex l_av, l_wv;
+    auto av = [this, &l_av](std::shared_ptr<Process> n){
+        std::lock_guard<std::mutex> l(l_av);
+        std::cout << "Analyzing...\n";
+        this->AnalyzeVideos(n);
+        std::cout << "Done Analyzing\n";
+    };
+
+    auto wv = [this, &l_wv](std::shared_ptr<Process> n){
+        std::lock_guard<std::mutex> l(l_wv);
+        std::cout << "Writing...\n";
+        this->WriteVideo(n);
+        std::cout << "Done Writing\n";
+    };
+
+    auto benchmark = [](auto& f, auto& n) {
+        auto time_start = cv::getTickCount(); 
+        f(n);        
+        std::cout << "=== Time taken: ";
+        std::cout << (double)(cv::getTickCount() - time_start)/cv::getTickFrequency();
+        std::cout << " seconds ===\n";
+    };
+
+    auto awv = [av, wv, benchmark](auto n){
+        benchmark(av, n);
+        benchmark(wv, n);
+    };
+
+    std::vector<std::thread> threads(_buffer.size());
+    for(int i = 0; i < threads.size(); i++)
+    {
+        threads[i] = std::thread(awv, _buffer.front());
+        _buffer.pop();
+    }
+
+    for(int i = 0; i < threads.size(); i++)
+        threads[i].join();
+}
+
+void Processor::AnalyzeVideos(std::shared_ptr<Process>& n)
+{
+    bool synced = false;
+    for(int i = 0 ; i < 2; i++)
+    {
+        QREvent detect_QR;
+        while(true)
+        {
+            if(!detect_QR.DetectedQR())
+            {
+                n->videos[i]->Read();
+                if(n->videos[i]->Get())
+                    detect_QR.CheckFrame(*n->videos[i]->Get(), n->videos[i]->Frame);
+            }
+            else break;
+        }
+        if(!detect_QR.DetectedQR()) synced = false;
+        else synced = true;
+    }
+
+    if (!synced)
+        throw std::runtime_error("Videos did not sync. QR code(s) missing or undetected");
+
+    Tracker::Settings t_conf;
+    t_conf.bDrawContours = false;
+    t_conf.MinThreshold = 200;
+    auto t = std::make_unique<Tracker>(t_conf);
+
+    int frame_num = 0;
+    while (!n->videos[0]->Ended() && !n->videos[1]->Ended())
+    {
+        std::shared_ptr<cv::Mat> frames[2];
+        for(int i = 0; i < 2; i++)
+            n->videos[i]->Read();
+        
+        if(n->videos[0]->Get() && n->videos[1]->Get())
+            for(int i = 0; i < 2; i++)
+            {
+                frames[i] = n->videos[i]->Get();
+                // TODO: Add new calibrator here.
+                t->CreateMask(*frames[0]);
+                t->CheckForActivity(frame_num);
+            }
+            // Write the concatenated undistorted frames.
+            auto res = ConcatenateMatrices(*frames[0], *frames[1]);
+            n->frames.push_back(res);
+            frame_num++;
+    }
+
+    n->events = std::make_shared<JSON>("DetectedEvents");
+    for(auto event : t->ActivityRange)
+    {
+        if(event->IsActive())
+            event->EndEvent(frame_num);
+        n->events->AddObject(event->GetAsJSON());
+    }
+    n->events->BuildJSONObjectArray();
+}
+
+void Processor::WriteVideo(std::shared_ptr<Process>& n)
+{
+    std::string file = "./static/proc_videos/" + n->videos[0]->FileName +  ".mp4";
+    cv::VideoWriter writer(file,
+                n->videos[0]->FOURCC,
+                n->videos[0]->FPS,
+                cv::Size(n->videos[0]->Width + n->videos[1]->Width,
+                        std::max(n->videos[0]->Height, n->videos[1]->Height)),
+                true);
+
+    for(auto frame : n->frames)
+        writer << frame;
+
+    std::ofstream configFile;
+    configFile.open("static/video-info/DE_" + n->videos[0]->FileName + ".json");
+    configFile << n->events->GetJSON();
+    configFile.close();
+}
+
 void Processor::UndistortImage(cv::Mat& frame, int index) const
 {
+#ifndef CALIB
     _calib->UndistortImage(frame, index);
+#endif
 }
 
 void Processor::AssembleEvents(int& last_frame) const
@@ -174,6 +333,7 @@ void Processor::AssembleEvents(int& last_frame) const
             event->EndEvent(last_frame);
         _detected_events->AddObject(event->GetAsJSON());
     }
+    _detected_events->BuildJSONObjectArray();
 }
 
 bool Processor::SyncVideos() const
