@@ -1,7 +1,5 @@
-FROM golang:1.12.7-stretch
+FROM golang:1.12.7-stretch AS golang
 LABEL maintainer="Tomas Rigaux"
-
-EXPOSE 3300
 
 ADD setup.sh /
 RUN /setup.sh FULL
@@ -9,4 +7,14 @@ RUN /setup.sh FULL
 RUN mkdir -p /goFish
 COPY . /goFish
 
-CMD ["/goFish/GoFish", "3300"]
+ENV LD_LIBRARY_PATH="LD_LIBRARY_PATH:/usr/local/lib/"
+
+RUN /goFish/build.sh
+
+FROM golang:1.12.7-stretch
+COPY --from=golang /goFish .
+COPY --from=golang /usr /usr
+
+EXPOSE 3300
+
+CMD ["./GoFish", "3300"]

@@ -38,7 +38,7 @@ if [[ $1 = "FULL" ]] || [[ $1 = "OPENCV" ]]; then
     git checkout $OPENCV_VERSION
     cd ~/opencv || exit
     git checkout $OPENCV_VERSION
-    mkdir build
+    mkdir -p build
     cd build || exit
     
     ## Make and install OpenCV.

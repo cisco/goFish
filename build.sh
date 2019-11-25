@@ -1,4 +1,4 @@
-#!/bin/bash
+# !/bin/bash
 
 ## Runs on Docker image.
 cd /goFish
@@ -10,11 +10,11 @@ cd .. || exit
 
 ## Build C++
 cd findFish || exit
-mkdir -p build
+mkdir -p build || exit
 cd build || exit
 cmake .. && make
 cd ../.. || exit
 
 cd /goFish
-ln -sfn /goFish/goServer/goFish /goFish/GoFish
-ln -sfn /goFish/findFish/findFish /goFish/FishFinder
+ln -sfn ./goServer/goServer /goFish/GoFish
+ln -sfn ./findFish/build/findFish /goFish/FishFinder
