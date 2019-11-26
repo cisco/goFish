@@ -6,6 +6,7 @@ jobs:
       - checkout
       - run: docker pull ghostofcookie/gofish:latest
   build:
+    machine: true
     requires: 
       - pull
     steps:
@@ -13,6 +14,7 @@ jobs:
       - run: docker run ghostofcookie/gofish:latest ./build.sh
       - run: docker run ghostofcookie/gofish:latest ./run_tests.sh
   push:
+    machine: true
     requires: 
       - build
     steps:
