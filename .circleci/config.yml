@@ -1,0 +1,20 @@
+version: 2
+jobs:
+  pull:
+    machine: true
+    steps:
+      - checkout
+      - run: docker pull ghostofcookie/gofish:latest
+  build:
+    requires: 
+      - pull
+    steps:
+      # Need to build docker image from newly updated code.
+      - run: docker run ghostofcookie/gofish:latest ./build.sh
+      - run: docker run ghostofcookie/gofish:latest ./run_tests.sh
+  push:
+    requires: 
+      - build
+    steps:
+      - run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - run: docker push ghostofcookie/gofish:latest
