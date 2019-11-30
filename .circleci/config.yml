@@ -11,8 +11,8 @@ jobs:
       - pull
     steps:
       # Need to build docker image from newly updated code.
-      - run: docker run ghostofcookie/gofish:latest ./build.sh
-      - run: docker run ghostofcookie/gofish:latest ./run_tests.sh
+      - run: docker run ghostofcookie/gofish:latest /bin/sh ./build.sh
+      - run: docker run ghostofcookie/gofish:latest /bin/sh ./run_tests.sh
   push:
     machine: true
     requires: 
